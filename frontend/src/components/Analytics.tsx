@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, ChevronDown, BarChart3, Calendar } from 'lucide-react';
-import type { Roommate, Expense, CurrencyCode, AnalyticsTimeframe } from '../types';
+import type { Roommate, Expense, AnalyticsTimeframe } from '../types';
 
-const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
-    GBP: '£', USD: '$', EUR: '€', INR: '₹', JPY: '¥'
-};
+// const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
+//     GBP: '£', USD: '$', EUR: '€', INR: '₹', JPY: '¥'
+// };
 
 interface AnalyticsProps {
     activeGroupId: string;
@@ -15,7 +15,14 @@ interface AnalyticsProps {
     onBack: () => void;
 }
 
-export default function Analytics({ activeGroupId, activeInstanceId, activeMembers, expenses, fxRates, onBack }: AnalyticsProps) {
+export default function Analytics({
+    activeGroupId,
+    activeInstanceId: _activeInstanceId, // 💡 Prefixed with underscore to pass strict check
+    activeMembers,
+    expenses,
+    fxRates: _fxRates,                   // 💡 Prefixed with underscore to pass strict check
+    onBack
+}: AnalyticsProps) {
     const [timeframe, setTimeframe] = useState<AnalyticsTimeframe>('MONTH');
     const [selectedHistoricalMonth, setSelectedHistoricalMonth] = useState<number>(new Date().getMonth());
 
