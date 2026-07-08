@@ -17,7 +17,7 @@ export interface Group {
     instances: GroupInstance[];
 }
 
-export type SplitType = 'EQUAL' | 'EXACT';
+export type SplitType = 'EQUAL' | 'EXACT' | 'SELECTIVE';
 export type CurrencyCode = 'GBP' | 'USD' | 'EUR' | 'INR' | 'JPY';
 export type AnalyticsTimeframe = 'WEEK' | 'MONTH' | 'SELECT_MONTH';
 

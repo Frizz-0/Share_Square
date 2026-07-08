@@ -32,6 +32,7 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
         customValues: {} as Record<string, string>
     });
     const [editAttachedFile, setEditAttachedFile] = useState<string>('');
+    const [editSelectiveMembers, setEditSelectiveMembers] = useState<Record<string, boolean>>({});
 
     const scopedExpenses = expenses.filter(e => e.groupId === activeGroupId && e.instanceId === activeInstanceId);
 
@@ -92,6 +93,10 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
             customValues: originalCurrencyValues
         });
         setEditAttachedFile(exp.attachmentName || '');
+
+        const selectiveState: Record<string, boolean> = {};
+        activeMembers.forEach(m => { selectiveState[m.name] = (exp.splits[m.name] || 0) > 0 || m.name === exp.paidBy; });
+        setEditSelectiveMembers(selectiveState);
     };
 
     const submitEditUpdate = (e: React.FormEvent) => {
@@ -108,6 +113,13 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
         if (editForm.splitType === 'EQUAL') {
             const perPersonShareGBP = amountInGBP / activeMembers.length;
             activeMembers.forEach(m => { computedSplitsGBP[m.name] = perPersonShareGBP; });
+        } else if (editForm.splitType === 'SELECTIVE') {
+            const selectedList = activeMembers.filter(m => editSelectiveMembers[m.name] !== false);
+            const denominator = selectedList.length > 0 ? selectedList.length : 1;
+            const perPersonShareGBP = amountInGBP / denominator;
+            activeMembers.forEach(m => {
+                computedSplitsGBP[m.name] = editSelectiveMembers[m.name] !== false ? perPersonShareGBP : 0;
+            });
         } else {
             activeMembers.forEach(m => {
                 const rawShare = parseFloat(editForm.customValues[m.name]) || 0;
@@ -225,10 +237,30 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                 <div>
                                     <label className="block text-[11px] font-black text-stone-400 uppercase mb-1">Split Method</label>
                                     <select value={editForm.splitType} onChange={(e) => setEditForm({ ...editForm, splitType: e.target.value as SplitType, customValues: {} })} className="w-full bg-stone-50 border rounded-2xl px-2 py-3.5 text-base font-bold focus:outline-none">
-                                        <option value="EQUAL">Equally</option><option value="EXACT">Exact Values Assistant</option>
+                                        <option value="EQUAL">Equally</option><option value="EXACT">Exact Values Assistant</option><option value="SELECTIVE">Selective (Split Between Some)</option>
                                     </select>
                                 </div>
                             </div>
+
+                            {editForm.splitType === 'SELECTIVE' && (
+                                <div className="p-4 bg-stone-50 rounded-2xl space-y-2.5 border border-stone-100">
+                                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-wide mb-1">Select who is included in this bill:</p>
+                                    {activeMembers.map(m => (
+                                        <div key={m.id} className="flex items-center gap-3 py-1">
+                                            <input
+                                                type="checkbox"
+                                                id={`edit-select-${m.name}`}
+                                                checked={editSelectiveMembers[m.name] !== false}
+                                                onChange={(e) => setEditSelectiveMembers({ ...editSelectiveMembers, [m.name]: e.target.checked })}
+                                                className="rounded text-emerald-700 h-4 w-4 focus:ring-0"
+                                            />
+                                            <label htmlFor={`edit-select-${m.name}`} className="text-sm font-bold text-stone-700 select-none cursor-pointer flex items-center gap-1.5">
+                                                <span>{m.avatar}</span> <span>{m.name}</span>
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <div className="space-y-1">
                                 <label className="block text-[11px] font-black text-stone-400 uppercase mb-1">Amount</label>
