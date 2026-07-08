@@ -5,7 +5,7 @@ import Analytics from './components/Analytics';
 import LedgerDeck from './components/LedgerDeck';
 
 // 🌐 CLOUD ROUTING HOOK: Point this signature to your deployed live AWS API Gateway link!
-const AWS_API_GATEWAY_URL = "https://45hyfwwvpys24zxssencgexttu0xygwx.lambda-url.eu-north-1.on.aws/";
+const AWS_API_GATEWAY_URL = "https://45hyfwwvpys24zxssencgexttu0xygwx.lambda-url.eu-north-1.on.aws";
 
 const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   GBP: '£', USD: '$', EUR: '€', INR: '₹', JPY: '¥'
@@ -19,7 +19,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Core Arrays populated dynamically from cloud engines
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([])
   const [roommates, setRoommates] = useState<Roommate[]>([
     { id: 1, name: 'You', avatar: '👤' },
     { id: 2, name: 'Alex', avatar: '🦊' },
@@ -74,8 +74,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    localStorage.setItem('sharesquare_v9_roommates', JSON.stringify(roommates));
+    localStorage.setItem('sharesquare_v9_groups', JSON.stringify(groups));
     localStorage.setItem('sharesquare_v9_audit', JSON.stringify(auditLogs));
-  }, [auditLogs]);
+  }, [roommates, groups, expenses, auditLogs]);
 
   // ☁️ SYNC LIFECYCLE 2: Read records directly from AWS cloud database on active workspace change
   useEffect(() => {
@@ -267,12 +269,23 @@ export default function App() {
       });
       const savedItem = await response.json();
 
-      setExpenses(prev => [{ ...savedItem, id: savedItem.expenseId }, ...prev]);
+      // 💡 FIX: Create an explicit fallback so React always has a valid 'id' key string instantly
+      const guaranteedId = savedItem.expenseId || savedItem.id || `EXP#${Date.now()}`;
+      const sanitizedFrontendItem: Expense = {
+        ...payload,
+        id: guaranteedId,
+        date: savedItem.date || new Date().toISOString()
+      };
+
+      // Push straight onto your UI state history instantly
+      setExpenses(prev => [sanitizedFrontendItem, ...prev]);
+
+      // Reset form states cleanly
       setIsCustomSettleOpen(false);
       pushLog('DEBT_SETTLED', `Manual record processed: ${customSettlePayer} cleared £${settleAmtVal.toFixed(2)} to ${customSettleReceiver}`);
       setCustomSettleAmt('');
     } catch (err) {
-      alert("Cloud database execution dropped. Check link endpoints.");
+      alert("Network synchronization failed. Check backend gateway status routes.");
     }
   };
 
@@ -308,7 +321,7 @@ export default function App() {
       });
     }
 
-    const payload = {
+    const createdExpensePayload = {
       groupId: activeGroupId,
       instanceId: activeInstanceId,
       title: newExpense.title,
@@ -325,17 +338,38 @@ export default function App() {
       const response = await fetch(`${AWS_API_GATEWAY_URL}/expenses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(createdExpensePayload)
       });
+
       const savedItem = await response.json();
 
-      setExpenses(prev => [{ ...savedItem, id: savedItem.expenseId }, ...prev]);
+      // Force an alignment match back onto your frontend mapping model parameters
+      const sanitizedFrontendItem: Expense = {
+        id: savedItem.expenseId || savedItem.id || `EXP#${Date.now()}`,
+        groupId: savedItem.groupId || activeGroupId,
+        instanceId: savedItem.instanceId || activeInstanceId,
+        title: savedItem.title || newExpense.title,
+        paidBy: savedItem.paidBy || newExpense.paidBy,
+        amount: savedItem.amount || rawAmt,
+        currency: (savedItem.currency as CurrencyCode) || newExpense.currency,
+        convertedAmountGBP: savedItem.convertedAmountGBP || amountInGBP,
+        date: savedItem.date || new Date().toISOString(),
+        splitType: (savedItem.splitType as SplitType) || newExpense.splitType,
+        splits: savedItem.splits || computedSplitsGBP,
+        attachmentName: savedItem.attachmentName || undefined
+      };
+
+      // Instantly append to local array state layout tracking engine
+      setExpenses(prev => [sanitizedFrontendItem, ...prev]);
+
       setIsExpenseModalOpen(false);
-      pushLog('EXPENSE_CREATED', `Logged bill: "${newExpense.title}" paid by ${newExpense.paidBy} worth £${amountInGBP.toFixed(2)}`);
+      pushLog('EXPENSE_CREATED', `Logged bill: "${sanitizedFrontendItem.title}" paid by ${sanitizedFrontendItem.paidBy} worth £${sanitizedFrontendItem.convertedAmountGBP.toFixed(2)}`);
+
+      // Reset state form triggers cleanly
       setNewExpense({ title: '', amount: '', currency: 'GBP', paidBy: 'You', note: '', splitType: 'EQUAL', isRecurring: false, recurringDay: '1', customValues: {} });
       setModalAttachedFile('');
     } catch (err) {
-      alert("Cloud persistence sync failure.");
+      alert("Network synchronization failed. Check backend gateway status routes.");
     }
   };
 
