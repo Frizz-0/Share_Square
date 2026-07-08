@@ -4,37 +4,31 @@ import type { Roommate, Group, Expense, SplitType, CurrencyCode, DirectDebt, Gro
 import Analytics from './components/Analytics';
 import LedgerDeck from './components/LedgerDeck';
 
+// 🌐 CLOUD ROUTING HOOK: Point this signature to your deployed live AWS API Gateway link!
+const AWS_API_GATEWAY_URL = "https://45hyfwwvpys24zxssencgexttu0xygwx.lambda-url.eu-north-1.on.aws/";
+
 const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   GBP: '£', USD: '$', EUR: '€', INR: '₹', JPY: '¥'
 };
 
 export default function App() {
   const [viewMode, setViewMode] = useState<'DASHBOARD' | 'ANALYTICS'>('DASHBOARD');
-
-  const [roommates, setRoommates] = useState<Roommate[]>(() => {
-    const cached = localStorage.getItem('sharesquare_v9_roommates');
-    return cached ? JSON.parse(cached) : [
-      { id: 1, name: 'You', avatar: '👤' },
-      { id: 2, name: 'Alex', avatar: '🦊' },
-      { id: 3, name: 'Jordan', avatar: '🦥' },
-    ];
-  });
-
-  const [groups, setGroups] = useState<Group[]>(() => {
-    const cached = localStorage.getItem('sharesquare_v9_groups');
-    return cached ? JSON.parse(cached) : [
-      { id: 'g1', name: 'Apartment 4B', icon: '🏠', memberIds: [1, 2, 3], instances: [{ id: 'inst-default', name: 'General Bills' }] },
-    ];
-  });
-
   const [activeGroupId, setActiveGroupId] = useState<string>('g1');
   const [activeInstanceId, setActiveInstanceId] = useState<string>('inst-default');
   const [fxRates, setFxRates] = useState<Record<string, number>>({ GBP: 1, USD: 1.28, EUR: 1.18, INR: 107.0, JPY: 202.0 });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    const cached = localStorage.getItem('sharesquare_v9_ledger');
-    return cached ? JSON.parse(cached) : [];
-  });
+  // Core Arrays populated dynamically from cloud engines
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [roommates, setRoommates] = useState<Roommate[]>([
+    { id: 1, name: 'You', avatar: '👤' },
+    { id: 2, name: 'Alex', avatar: '🦊' },
+    { id: 3, name: 'Jordan', avatar: '🦥' },
+  ]);
+
+  const [groups, setGroups] = useState<Group[]>([
+    { id: 'g1', name: 'Apartment 4B', icon: '🏠', memberIds: [1, 2, 3], instances: [{ id: 'inst-default', name: 'General Bills' }] },
+  ]);
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
     const cached = localStorage.getItem('sharesquare_v9_audit');
@@ -65,13 +59,14 @@ export default function App() {
   const [modalAttachedFile, setModalAttachedFile] = useState<string>('');
 
   const [newExpense, setNewExpense] = useState({
-    title: '', amount: '', currency: 'GBP' as CurrencyCode, paidBy: 'You', // Track payer form field state
+    title: '', amount: '', currency: 'GBP' as CurrencyCode, paidBy: 'You',
     note: '', splitType: 'EQUAL' as SplitType, isRecurring: false, recurringDay: '1', customValues: {} as Record<string, string>
   });
 
   const activeGroup = groups.find(g => g.id === activeGroupId) || groups[0];
   const activeMembers = roommates.filter(r => activeGroup.memberIds.includes(r.id));
 
+  // ☁️ SYNC LIFECYCLE 1: Fetch exchange rates and cached system logs
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/GBP')
       .then(res => res.json())
@@ -79,11 +74,39 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('sharesquare_v9_roommates', JSON.stringify(roommates));
-    localStorage.setItem('sharesquare_v9_groups', JSON.stringify(groups));
-    localStorage.setItem('sharesquare_v9_ledger', JSON.stringify(expenses));
     localStorage.setItem('sharesquare_v9_audit', JSON.stringify(auditLogs));
-  }, [roommates, groups, expenses, auditLogs]);
+  }, [auditLogs]);
+
+  // ☁️ SYNC LIFECYCLE 2: Read records directly from AWS cloud database on active workspace change
+  useEffect(() => {
+    setIsLoading(true);
+    fetch(`${AWS_API_GATEWAY_URL}/expenses?groupId=${activeGroupId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const sanitized: Expense[] = data.map((item: any) => ({
+            id: item.expenseId,
+            groupId: item.groupId,
+            instanceId: item.instanceId,
+            title: item.title,
+            paidBy: item.paidBy,
+            amount: item.amount,
+            currency: item.currency,
+            convertedAmountGBP: item.convertedAmountGBP,
+            date: item.date,
+            splitType: item.splitType,
+            splits: item.splits,
+            attachmentName: item.attachmentName || undefined
+          }));
+          setExpenses(sanitized);
+        }
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Cloud database hydration failed:", err);
+        setIsLoading(false);
+      });
+  }, [activeGroupId]);
 
   const convertToGBP = (amount: number, fromCurrency: CurrencyCode): number => {
     const rate = fxRates[fromCurrency] || 1;
@@ -213,7 +236,8 @@ export default function App() {
     pushLog('GROUP_PURGED', `Purged workspace entry records: "${targetGroupToDelete}"`, nextRemainingGroup.id);
   };
 
-  const handleExecuteCustomManualSettle = (e: React.FormEvent) => {
+  // ☁️ SYNC LIFECYCLE 3: Commit manual direct debt clearances straight to cloud storage pipeline
+  const handleExecuteCustomManualSettle = async (e: React.FormEvent) => {
     e.preventDefault();
     const settleAmtVal = parseFloat(customSettleAmt);
     if (isNaN(settleAmtVal) || settleAmtVal <= 0 || customSettlePayer === customSettleReceiver) return;
@@ -222,17 +246,34 @@ export default function App() {
     computedSplitsGBP[customSettlePayer] = settleAmtVal;
     computedSplitsGBP[customSettleReceiver] = 0;
 
-    const settlementLog: Expense = {
-      id: Date.now(), groupId: activeGroupId, instanceId: activeInstanceId,
-      title: `🤝 Settlement: ${customSettlePayer} paid ${customSettleReceiver}`, paidBy: customSettlePayer,
-      amount: settleAmtVal, currency: 'GBP', convertedAmountGBP: settleAmtVal,
-      date: new Date().toISOString(), splitType: 'EXACT', splits: computedSplitsGBP, isSettlement: true
+    const payload = {
+      groupId: activeGroupId,
+      instanceId: activeInstanceId,
+      title: `🤝 Settlement: ${customSettlePayer} paid ${customSettleReceiver}`,
+      paidBy: customSettlePayer,
+      amount: settleAmtVal,
+      currency: 'GBP' as CurrencyCode,
+      convertedAmountGBP: settleAmtVal,
+      splitType: 'EXACT' as SplitType,
+      splits: computedSplitsGBP,
+      isSettlement: true
     };
 
-    setExpenses([settlementLog, ...expenses]);
-    setIsCustomSettleOpen(false);
-    pushLog('DEBT_SETTLED', `Manual record processed: ${customSettlePayer} cleared £${settleAmtVal.toFixed(2)} to ${customSettleReceiver}`);
-    setCustomSettleAmt('');
+    try {
+      const response = await fetch(`${AWS_API_GATEWAY_URL}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const savedItem = await response.json();
+
+      setExpenses(prev => [{ ...savedItem, id: savedItem.expenseId }, ...prev]);
+      setIsCustomSettleOpen(false);
+      pushLog('DEBT_SETTLED', `Manual record processed: ${customSettlePayer} cleared £${settleAmtVal.toFixed(2)} to ${customSettleReceiver}`);
+      setCustomSettleAmt('');
+    } catch (err) {
+      alert("Cloud database execution dropped. Check link endpoints.");
+    }
   };
 
   const handleExactValueChange = (targetMemberName: string, value: string) => {
@@ -249,7 +290,8 @@ export default function App() {
     }
   };
 
-  const handleCreateExpense = (e: React.FormEvent<HTMLFormElement>) => {
+  // ☁️ SYNC LIFECYCLE 4: Commit fresh expenses safely to DynamoDB via Gateway POST network events
+  const handleCreateExpense = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const rawAmt = parseFloat(newExpense.amount);
     if (!newExpense.title || isNaN(rawAmt) || rawAmt <= 0) return;
@@ -262,49 +304,83 @@ export default function App() {
       activeMembers.forEach(m => { computedSplitsGBP[m.name] = perPersonShareGBP; });
     } else {
       activeMembers.forEach(m => {
-        const rawShare = parseFloat(newExpense.customValues[m.name]) || 0;
-        computedSplitsGBP[m.name] = convertToGBP(rawShare, newExpense.currency);
+        computedSplitsGBP[m.name] = convertToGBP(parseFloat(newExpense.customValues[m.name]) || 0, newExpense.currency);
       });
     }
 
-    const createdExpense: Expense = {
-      id: Date.now(), groupId: activeGroupId, instanceId: activeInstanceId,
-      title: newExpense.title, paidBy: newExpense.paidBy, amount: rawAmt, currency: newExpense.currency,
-      convertedAmountGBP: amountInGBP, date: new Date().toISOString(), note: newExpense.note.trim() || undefined,
-      splitType: newExpense.splitType, splits: computedSplitsGBP, isRecurring: newExpense.isRecurring,
-      recurringDay: newExpense.isRecurring ? parseInt(newExpense.recurringDay) : undefined,
-      attachmentName: modalAttachedFile || undefined
+    const payload = {
+      groupId: activeGroupId,
+      instanceId: activeInstanceId,
+      title: newExpense.title,
+      paidBy: newExpense.paidBy,
+      amount: rawAmt,
+      currency: newExpense.currency,
+      convertedAmountGBP: amountInGBP,
+      splitType: newExpense.splitType,
+      splits: computedSplitsGBP,
+      attachmentName: modalAttachedFile || null
     };
 
-    setExpenses([createdExpense, ...expenses]);
-    setIsExpenseModalOpen(false);
-    pushLog('EXPENSE_CREATED', `Logged bill: "${createdExpense.title}" paid by ${createdExpense.paidBy} worth £${amountInGBP.toFixed(2)}`);
-    setNewExpense({ title: '', amount: '', currency: 'GBP', paidBy: 'You', note: '', splitType: 'EQUAL', isRecurring: false, recurringDay: '1', customValues: {} });
-    setModalAttachedFile('');
+    try {
+      const response = await fetch(`${AWS_API_GATEWAY_URL}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const savedItem = await response.json();
+
+      setExpenses(prev => [{ ...savedItem, id: savedItem.expenseId }, ...prev]);
+      setIsExpenseModalOpen(false);
+      pushLog('EXPENSE_CREATED', `Logged bill: "${newExpense.title}" paid by ${newExpense.paidBy} worth £${amountInGBP.toFixed(2)}`);
+      setNewExpense({ title: '', amount: '', currency: 'GBP', paidBy: 'You', note: '', splitType: 'EQUAL', isRecurring: false, recurringDay: '1', customValues: {} });
+      setModalAttachedFile('');
+    } catch (err) {
+      alert("Cloud persistence sync failure.");
+    }
   };
 
-  const triggerSettleTransaction = () => {
+  const triggerSettleTransaction = async () => {
     if (!settleTarget) return;
     const computedSplitsGBP: Record<string, number> = {};
     computedSplitsGBP[settleTarget.from] = settleTarget.amount;
     computedSplitsGBP[settleTarget.to] = 0;
 
-    const settlementLog: Expense = {
-      id: Date.now(), groupId: activeGroupId, instanceId: activeInstanceId,
-      title: `🤝 Cleared: ${settleTarget.from} paid ${settleTarget.to}`, paidBy: settleTarget.from,
-      amount: settleTarget.amount, currency: 'GBP', convertedAmountGBP: settleTarget.amount,
-      date: new Date().toISOString(), splitType: 'EXACT', splits: computedSplitsGBP, isSettlement: true
+    const payload = {
+      groupId: activeGroupId,
+      instanceId: activeInstanceId,
+      title: `🤝 Cleared: ${settleTarget.from} paid ${settleTarget.to}`,
+      paidBy: settleTarget.from,
+      amount: settleTarget.amount,
+      currency: 'GBP' as CurrencyCode,
+      convertedAmountGBP: settleTarget.amount,
+      splitType: 'EXACT' as SplitType,
+      splits: computedSplitsGBP,
+      isSettlement: true
     };
 
-    setExpenses([settlementLog, ...expenses]);
-    setIsSettleModalOpen(false);
-    pushLog('DEBT_SETTLED', `Cleared debt routing path node: ${settleTarget.from} paid ${settleTarget.to} £${settleTarget.amount.toFixed(2)}`);
-    setSettleTarget(null);
+    try {
+      const response = await fetch(`${AWS_API_GATEWAY_URL}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const savedItem = await response.json();
+
+      setExpenses(prev => [{ ...savedItem, id: savedItem.expenseId }, ...prev]);
+      setIsSettleModalOpen(false);
+      pushLog('DEBT_SETTLED', `Cleared debt routing path node: ${settleTarget.from} paid ${settleTarget.to} £${settleTarget.amount.toFixed(2)}`);
+      setSettleTarget(null);
+    } catch (err) {
+      alert("Synchronization failure clearing optimization link.");
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] w-full p-2 sm:p-6 flex justify-center items-start font-sans antialiased text-[#2C2A29]">
       <div className="w-full max-w-md bg-white rounded-[44px] shadow-2xl border border-stone-100 overflow-hidden flex flex-col min-h-[88vh] relative">
+
+        {/* Sleek inline cloud loading sync banner */}
+        {isLoading && <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center font-bold text-xs text-stone-500 z-50">Syncing with AWS Cloud...</div>}
 
         {viewMode === 'DASHBOARD' ? (
           <>
@@ -320,7 +396,7 @@ export default function App() {
 
             <div className="px-6 py-4 bg-stone-50/70 border-b border-stone-100 overflow-x-auto flex gap-3 scrollbar-none">
               {groups.map(g => (
-                <button key={g.id} onClick={() => { setActiveGroupId(g.id); setActiveInstanceId(g.instances[0]?.id || ''); }} className={`flex items-center gap-2 px-5 py-3.5 rounded-2xl text-sm font-black transition-all shadow-sm shrink-0 ${g.id === activeGroupId ? 'bg-emerald-950 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
+                <button key={g.id} onClick={() => { setActiveGroupId(g.id); setActiveInstanceId(g.instances[0]?.id || ''); }} className={`flex items-center gap-2 px-5 py-3.5 rounded-2xl text-sm font-black tracking-tight transition-all shadow-sm shrink-0 ${g.id === activeGroupId ? 'bg-emerald-950 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
                   <span className="text-xl">{g.icon}</span><span>{g.name}</span>
                 </button>
               ))}
@@ -363,14 +439,10 @@ export default function App() {
                 <h3 className="text-xs font-black tracking-wider text-stone-400 uppercase mb-3 flex items-center gap-1.5">
                   <Users size={14} /> Net Optimized Clearances
                 </h3>
-                {/* 👇 Changed from optimizedDebtsList to direct evaluation */}
                 {getMinimizedDebts().length === 0 ? (
-                  <div className="p-4 text-center bg-[#111014]/50 border border-stone-800/80 rounded-2xl text-sm text-stone-400 font-medium">
-                    All balances completely clean! 🔮
-                  </div>
+                  <div className="p-4 text-center bg-stone-50/50 border border-dashed border-stone-200 rounded-2xl text-sm text-stone-400 font-medium">All balances squared away! 🎉</div>
                 ) : (
                   <div className="space-y-2.5">
-                    {/* 👇 Changed here as well */}
                     {getMinimizedDebts().map((debt, idx) => (
                       <div key={idx} className="p-4 bg-white border border-stone-200 rounded-2xl flex items-center justify-between text-sm shadow-sm">
                         <div className="flex items-center gap-2 text-stone-700 font-bold">
@@ -381,12 +453,7 @@ export default function App() {
                         <div className="flex items-center gap-3">
                           <span className="font-black text-emerald-700 text-base">£{debt.amount.toFixed(2)}</span>
                           {debt.from === 'You' && (
-                            <button
-                              onClick={() => { setSettleTarget(debt); setIsSettleModalOpen(true); }}
-                              className="bg-white border border-stone-200 text-xs font-black px-4 py-2.5 rounded-xl shadow-sm"
-                            >
-                              Pay
-                            </button>
+                            <button onClick={() => { setSettleTarget(debt); setIsSettleModalOpen(true); }} className="bg-white border border-stone-200 text-xs font-black px-4 py-2.5 rounded-xl shadow-sm">Pay</button>
                           )}
                         </div>
                       </div>
@@ -399,8 +466,8 @@ export default function App() {
                 expenses={expenses}
                 activeGroupId={activeGroupId}
                 activeInstanceId={activeInstanceId}
-                activeMembers={activeMembers} // Injected parameter mapping
-                fxRates={fxRates}             // Injected currency weights conversion lookup
+                activeMembers={activeMembers}
+                fxRates={fxRates}
                 onDeleteExpense={(id) => setExpenses(expenses.filter(e => e.id !== id))}
                 onUpdateExpense={(updated) => setExpenses(expenses.map(e => e.id === updated.id ? updated : e))}
               />
@@ -410,7 +477,7 @@ export default function App() {
           <Analytics activeGroupId={activeGroupId} activeInstanceId={activeInstanceId} activeMembers={activeMembers} expenses={expenses} fxRates={fxRates} onBack={() => setViewMode('DASHBOARD')} />
         )}
 
-        {/* COMPREHENSIVE WINDOWS OVERLAYS PORTALS HANDLERS */}
+        {/* OVERLAYS AND MODAL INTERFACES PORTS */}
         {isCustomSettleOpen && (
           <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-end justify-center z-50 p-4">
             <form onSubmit={handleExecuteCustomManualSettle} className="bg-white w-full max-w-md rounded-[32px] p-6 space-y-4 relative border border-stone-100 shadow-2xl animate-slide-up">
@@ -479,7 +546,7 @@ export default function App() {
               <button type="button" onClick={() => setIsInstanceModalOpen(false)} className="absolute right-5 top-5 p-2 bg-stone-50 rounded-full text-stone-400"><X size={16} /></button>
               <h3 className="text-lg font-black text-stone-800">Create Event Sub-Ledger</h3>
               <input type="text" placeholder="e.g., Roadtrip Gas" value={newInstanceName} onChange={(e) => setNewInstanceName(e.target.value)} className="w-full bg-stone-50 border rounded-2xl px-4 py-3.5 text-base font-semibold focus:outline-none" required />
-              <button type="submit" className="w-full bg-emerald-950 text-white font-black py-4 rounded-2xl text-base shadow-sm">Instantiate Event</button>
+              <button type="submit" className="w-full bg-emerald-950 text-white font-black py-4 rounded-2xl text-sm shadow-sm">Instantiate Event</button>
             </form>
           </div>
         )}
@@ -519,7 +586,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 👤 2. FEATURE UPGRADE: Select who actually handled payment */}
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <label className="block text-[11px] font-black text-stone-400 uppercase mb-1">Paid By</label>
