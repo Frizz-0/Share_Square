@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Check, Users, Sparkles, CreditCard, Layers, FolderPlus, X, Trash2, ShieldAlert, BarChart3, Settings, Paperclip, ArrowRight, User } from 'lucide-react';
+import { Plus, Check, Users, Sparkles, CreditCard, Layers, FolderPlus, X, Trash2, ShieldAlert, BarChart3, Settings, Paperclip, ArrowRight } from 'lucide-react';
 import type { Roommate, Group, Expense, SplitType, CurrencyCode, DirectDebt, GroupInstance, AuditLog } from './types';
 import Analytics from './components/Analytics';
 import LedgerDeck from './components/LedgerDeck';
@@ -69,9 +69,9 @@ export default function App() {
   const [customSettleAmt, setCustomSettleAmt] = useState('');
   const [modalAttachedFile, setModalAttachedFile] = useState<string>('');
 
-  // Username Onboarding State
-  const [usernameInput, setUsernameInput] = useState('');
-  const [isSubmittingUsername, setIsSubmittingUsername] = useState(false);
+  // // Username Onboarding State
+  // const [usernameInput, setUsernameInput] = useState('');
+  // const [isSubmittingUsername, setIsSubmittingUsername] = useState(false);
 
   const [newExpense, setNewExpense] = useState({
     title: '', amount: '', currency: 'GBP' as CurrencyCode, paidBy: 'You',
@@ -84,7 +84,7 @@ export default function App() {
   // const userGroupId = user?.publicMetadata?.groupId as string || "20-malone";
 
   // Check if username is missing to trigger setup wall overlay
-  const needsUsernameOnboarding = user && !user.username;
+  // const needsUsernameOnboarding = user && !user.username;
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/GBP')
@@ -159,23 +159,23 @@ export default function App() {
     }
   }, [user, activeGroupId]);
 
-  const handleUsernameOnboardingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!usernameInput.trim() || !user) return;
+  // const handleUsernameOnboardingSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (!usernameInput.trim() || !user) return;
 
-    setIsSubmittingUsername(true);
-    try {
-      // 👤 Sync profile string update straight into Clerk core registry infrastructure
-      await user.update({
-        username: usernameInput.trim().toLowerCase()
-      });
-      pushLog('USER_ONBOARDED', `Claimed account username identity handle: @${usernameInput.trim().toLowerCase()}`);
-    } catch (err: any) {
-      alert(err.errors?.[0]?.message || "Username selection collision. Try a different format.");
-    } finally {
-      setIsSubmittingUsername(false);
-    }
-  };
+  //   setIsSubmittingUsername(true);
+  //   try {
+  //     // 👤 Sync profile string update straight into Clerk core registry infrastructure
+  //     await user.update({
+  //       username: usernameInput.trim().toLowerCase()
+  //     });
+  //     pushLog('USER_ONBOARDED', `Claimed account username identity handle: @${usernameInput.trim().toLowerCase()}`);
+  //   } catch (err: any) {
+  //     alert(err.errors?.[0]?.message || "Username selection collision. Try a different format.");
+  //   } finally {
+  //     setIsSubmittingUsername(false);
+  //   }
+  // };
 
   const convertToGBP = (amount: number, fromCurrency: CurrencyCode): number => {
     const rate = fxRates[fromCurrency] || 1;
