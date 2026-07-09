@@ -102,8 +102,8 @@ export default function AddExpenseModal({
                       onChange={(e) => setSelectiveMembers({ ...selectiveMembers, [m.name]: e.target.checked })}
                       className="rounded text-emerald-700 h-4 w-4 focus:ring-0"
                     />
-                    <label htmlFor={`select-${m.name}`} className="text-sm font-bold text-stone-700 select-none cursor-pointer flex items-center gap-1.5">
-                      <span>{m.avatar}</span> <span>{m.name}</span>
+                    <label htmlFor={`select-${m.name}`} className="text-sm font-bold text-stone-700 select-none cursor-pointer">
+                      {m.name}
                     </label>
                   </div>
                 ))}

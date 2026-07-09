@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import type { Roommate, Group, Expense, SplitType, CurrencyCode, DirectDebt, GroupInstance, AuditLog } from './types';
+import type { Roommate, Group, Expense, SplitType, CurrencyCode, DirectDebt, GroupInstance } from './types';
 import Analytics from './components/Analytics';
 import LedgerDeck from './components/LedgerDeck';
 import DashboardHeader from './components/DashboardHeader';
 import DashboardSummary from './components/DashboardSummary';
 import OnboardingScreen from './components/OnboardingScreen';
+import NoticesSchedule from './components/NoticesSchedule';
+import ConfirmDialog from './components/ConfirmDialog';
 import { CreateGroupModal, CreateInstanceModal, GroupSettingsModal, AuditModal } from './components/modals/GroupModals';
 import { SettleModal, CustomSettleModal } from './components/modals/SettleModals';
 import AddExpenseModal, { type NewExpenseForm } from './components/modals/AddExpenseModal';
 import { useUser } from '@clerk/clerk-react';
 import { fetchGroupData, postExpense, putExpense, deleteExpense as deleteExpenseApi } from './api/expenses';
 import { fetchUserGroups, createGroup as createGroupApi, joinGroupByCode, leaveGroup } from './api/groups';
+import { postAuditLog } from './api/audit';
 import { convertToGBP as convertToGBPRate, computeSplits, getMinimizedDebts, computeUserNetGBP } from './utils/finance';
 
 const INSTANCE_CACHE_KEY = 'sharesquare_v11_instances';
@@ -23,11 +26,12 @@ function loadCachedInstances(): Record<string, GroupInstance[]> {
   }
 }
 
+
 export default function App() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const userDisplayName = user?.firstName || 'You';
 
-  const [viewMode, setViewMode] = useState<'DASHBOARD' | 'ANALYTICS'>('DASHBOARD');
+  const [viewMode, setViewMode] = useState<'DASHBOARD' | 'ANALYTICS' | 'NOTICES'>('DASHBOARD');
   const [groups, setGroups] = useState<Group[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<string>('');
   const [activeInstanceId, setActiveInstanceId] = useState<string>('inst-default');
@@ -39,11 +43,6 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [roommates, setRoommates] = useState<Roommate[]>([]);
 
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    const cached = localStorage.getItem('sharesquare_v11_audit');
-    return cached ? JSON.parse(cached) : [];
-  });
-
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState<boolean>(false);
   const [isCustomSettleOpen, setIsCustomSettleOpen] = useState<boolean>(false);
@@ -53,6 +52,7 @@ export default function App() {
   const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState<boolean>(false);
 
   const [settleTarget, setSettleTarget] = useState<DirectDebt | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [newInstanceName, setNewInstanceName] = useState('');
   const [editGroupName, setEditGroupName] = useState('');
@@ -78,10 +78,6 @@ export default function App() {
       .then(data => { if (data && data.rates) setFxRates(data.rates); })
       .catch(err => console.error("FX sync delay:", err));
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('sharesquare_v11_audit', JSON.stringify(auditLogs));
-  }, [auditLogs]);
 
   // ☁️ Load the groups this signed-in user actually belongs to
   useEffect(() => {
@@ -170,12 +166,8 @@ export default function App() {
   const convertToGBP = (amount: number, fromCurrency: CurrencyCode): number => convertToGBPRate(amount, fromCurrency, fxRates);
 
   const pushLog = (action: string, details: string, targetedGroupId: string = activeGroupId) => {
-    const newLog: AuditLog = {
-      id: Date.now(), groupId: targetedGroupId,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      action, details
-    };
-    setAuditLogs(prev => [newLog, ...prev]);
+    if (!user) return;
+    postAuditLog(targetedGroupId, user.id, action, details).catch(err => console.error("Failed to record audit log:", err));
   };
 
   const persistInstances = (nextGroups: Group[]) => {
@@ -186,6 +178,7 @@ export default function App() {
 
   const minimizedDebts = activeGroup ? getMinimizedDebts(expenses, activeMembers, activeGroupId, activeInstanceId) : [];
   const currentYourNetGBP = activeGroup ? computeUserNetGBP(expenses, activeGroupId, activeInstanceId, userDisplayName) : 0;
+  const recurringExpenses = expenses.filter(e => e.isRecurring && e.groupId === activeGroupId);
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,9 +253,8 @@ export default function App() {
     setEditGroupName('');
   };
 
-  const handleDeleteActiveGroup = async () => {
+  const confirmDeleteActiveGroup = async () => {
     if (!user || groups.length <= 1) return;
-    if (!confirm(`Leave "${activeGroup.name}"? This removes you from the space.`)) return;
     try {
       await leaveGroup(activeGroupId, user.id, user.id);
       const targetGroupToDelete = activeGroup.name;
@@ -279,9 +271,17 @@ export default function App() {
     }
   };
 
-  const handleEvictMember = async (clerkId: string, name: string) => {
+  const handleDeleteActiveGroup = () => {
+    if (!user || groups.length <= 1) return;
+    setConfirmDialog({
+      title: 'Leave this space?',
+      message: `Leave "${activeGroup.name}"? This removes you from the space.`,
+      onConfirm: confirmDeleteActiveGroup
+    });
+  };
+
+  const confirmEvictMember = async (clerkId: string, name: string) => {
     if (!user) return;
-    if (!confirm(`Are you sure you want to remove ${name}?`)) return;
     setIsLoading(true);
     try {
       await leaveGroup(activeGroupId, clerkId, user.id);
@@ -292,6 +292,15 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEvictMember = (clerkId: string, name: string) => {
+    if (!user) return;
+    setConfirmDialog({
+      title: 'Remove this member?',
+      message: `Are you sure you want to remove ${name} from the space?`,
+      onConfirm: () => confirmEvictMember(clerkId, name)
+    });
   };
 
   const handleExecuteCustomManualSettle = async (e: React.FormEvent) => {
@@ -501,7 +510,7 @@ export default function App() {
                 <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-30 flex items-center justify-center rounded-3xl min-h-[250px]">
                   <div className="flex items-center gap-2 text-xs font-bold text-stone-500 bg-white border border-stone-200 px-4 py-2.5 rounded-full shadow-md animate-pulse">
                     <span className="h-2 w-2 bg-emerald-600 rounded-full animate-ping" />
-                    Syncing transaction matrix...
+                    Loading
                   </div>
                 </div>
               )}
@@ -510,10 +519,12 @@ export default function App() {
                 groupName={activeGroup.name}
                 currentYourNetGBP={currentYourNetGBP}
                 minimizedDebts={minimizedDebts}
+                recurringExpenses={recurringExpenses}
                 onAddBill={() => setIsExpenseModalOpen(true)}
                 onPaidBack={() => setIsCustomSettleOpen(true)}
                 onOpenAnalytics={() => setViewMode('ANALYTICS')}
                 onOpenAudit={() => setIsAuditModalOpen(true)}
+                onOpenNotices={() => setViewMode('NOTICES')}
                 onPayDebt={(debt) => { setSettleTarget(debt); setIsSettleModalOpen(true); }}
               />
 
@@ -528,8 +539,16 @@ export default function App() {
               />
             </main>
           </>
-        ) : (
+        ) : viewMode === 'ANALYTICS' ? (
           <Analytics activeGroupId={activeGroupId} activeInstanceId={activeInstanceId} activeMembers={activeMembers} expenses={expenses} fxRates={fxRates} onBack={() => setViewMode('DASHBOARD')} />
+        ) : (
+          <NoticesSchedule
+            groupId={activeGroupId}
+            userId={user?.id || ''}
+            isAdmin={isAdmin}
+            recurringExpenses={recurringExpenses}
+            onBack={() => setViewMode('DASHBOARD')}
+          />
         )}
 
         {isCustomSettleOpen && (
@@ -562,7 +581,7 @@ export default function App() {
         )}
 
         {isAuditModalOpen && (
-          <AuditModal auditLogs={auditLogs} activeGroupId={activeGroupId} onClose={() => setIsAuditModalOpen(false)} />
+          <AuditModal groupId={activeGroupId} userId={user?.id || ''} onClose={() => setIsAuditModalOpen(false)} />
         )}
 
         {isGroupModalOpen && (
@@ -590,6 +609,15 @@ export default function App() {
             convertToGBP={convertToGBP}
             onSubmit={handleCreateExpense}
             onClose={() => setIsExpenseModalOpen(false)}
+          />
+        )}
+
+        {confirmDialog && (
+          <ConfirmDialog
+            title={confirmDialog.title}
+            message={confirmDialog.message}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+            onCancel={() => setConfirmDialog(null)}
           />
         )}
 

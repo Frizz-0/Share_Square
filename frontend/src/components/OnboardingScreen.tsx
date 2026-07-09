@@ -77,7 +77,7 @@ export default function OnboardingScreen({ onCreateGroup, onJoinGroup }: Props) 
         {mode === 'JOIN' && (
           <form onSubmit={handleJoin} className="space-y-3">
             <label className="block text-[11px] font-black text-stone-400 uppercase">Invite Code</label>
-            <input type="text" placeholder="e.g., 7XQK2M" value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} className="w-full bg-stone-50 border rounded-2xl px-4 py-3.5 text-base font-black tracking-widest text-center focus:outline-none" required autoFocus maxLength={6} />
+            <input type="text" placeholder="e.g., 7XQK2M" value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} className="w-full bg-stone-50 border rounded-2xl px-4 py-3.5 text-base font-black tracking-widest text-center focus:outline-none" required autoFocus maxLength={7} />
             {error && <p className="text-xs text-rose-600 font-semibold">{error}</p>}
             <button type="submit" disabled={isSubmitting} className="w-full bg-emerald-950 text-white font-black py-4 rounded-2xl text-sm shadow-sm disabled:opacity-60">
               {isSubmitting ? 'Joining...' : 'Join Space'}

@@ -108,7 +108,7 @@ export default function Analytics({
                                 return (
                                     <div key={m.clerkId} className="space-y-1.5">
                                         <div className="flex justify-between text-xs font-black">
-                                            <span className="text-stone-300 flex items-center gap-1"><span>{m.avatar}</span> {m.name}</span>
+                                            <span className="text-stone-300">{m.name}</span>
                                             <span className="text-stone-200">£{shareValue.toFixed(2)} <span className="text-[10px] text-stone-500">({percentage.toFixed(0)}%)</span></span>
                                         </div>
                                         <div className="w-full bg-stone-800 h-2.5 rounded-full overflow-hidden shadow-inner">

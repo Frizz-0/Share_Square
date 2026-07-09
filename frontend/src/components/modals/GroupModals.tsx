@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Trash2, Users, Copy, Check } from 'lucide-react';
-import type { AuditLog, Group, Roommate } from '../../types';
+import type { Group, Roommate } from '../../types';
+import { fetchAuditLogs, type AuditEntry } from '../../api/audit';
 
 // ── Create or Join a Group ────────────────────────────────────
 
@@ -146,7 +147,6 @@ export function GroupSettingsModal({
             {roommates.map(m => (
               <div key={m.clerkId} className="p-3 bg-stone-50 rounded-2xl border flex items-center justify-between text-xs font-bold text-stone-700">
                 <div className="flex items-center gap-2">
-                  <span>{m.avatar || '👤'}</span>
                   <span>{m.name}</span>
                   {m.clerkId === currentUserId && <span className="text-[9px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md font-black uppercase">You</span>}
                 </div>
@@ -177,21 +177,38 @@ export function GroupSettingsModal({
 // ── Audit Trail ───────────────────────────────────────────────
 
 interface AuditModalProps {
-  auditLogs: AuditLog[];
-  activeGroupId: string;
+  groupId: string;
+  userId: string;
   onClose: () => void;
 }
 
-export function AuditModal({ auditLogs, activeGroupId, onClose }: AuditModalProps) {
+export function AuditModal({ groupId, userId, onClose }: AuditModalProps) {
+  const [logs, setLogs] = useState<AuditEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    fetchAuditLogs(groupId, userId)
+      .then(data => { if (!cancelled) setLogs(data); })
+      .catch(err => console.error("Failed to load audit trail:", err))
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [groupId, userId]);
+
   return (
     <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-end justify-center z-50 p-4">
       <div className="bg-white w-full max-w-md rounded-[32px] p-6 space-y-4 max-h-[85vh] overflow-y-auto relative border border-stone-100 shadow-2xl">
         <button type="button" onClick={onClose} className="absolute right-5 top-5 p-2 bg-stone-50 rounded-full text-stone-400"><X size={16} /></button>
-        <div><h3 className="text-lg font-black text-stone-800">System Audit Trails</h3><p className="text-xs text-stone-400 mt-0.5">Chronological trace logs</p></div>
+        <div><h3 className="text-lg font-black text-stone-800">System Audit Trails</h3><p className="text-xs text-stone-400 mt-0.5">Chronological trace logs, shared across the group</p></div>
         <div className="bg-stone-950 border border-stone-800 rounded-2xl p-4 space-y-2 font-mono text-[11px] text-stone-300 shadow-inner max-h-[40vh] overflow-y-auto">
-          {auditLogs.filter(log => log.groupId === activeGroupId).map(log => (
-            <div key={log.id} className="border-b border-stone-800 pb-2 last:border-0 last:pb-0 leading-relaxed">
-              <span className="text-purple-400 font-bold">[{log.timestamp}]</span> <span className="text-emerald-400 uppercase font-black">{log.action}:</span> {log.details}
+          {isLoading ? (
+            <div className="text-stone-500 text-center py-4">Loading...</div>
+          ) : logs.length === 0 ? (
+            <div className="text-stone-500 text-center py-4">No activity logged yet.</div>
+          ) : logs.map(log => (
+            <div key={log.expenseId} className="border-b border-stone-800 pb-2 last:border-0 last:pb-0 leading-relaxed">
+              <span className="text-purple-400 font-bold">[{new Date(log.date).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}]</span> <span className="text-emerald-400 uppercase font-black">{log.action}:</span> {log.details} <span className="text-stone-500">— {log.userName}</span>
             </div>
           ))}
         </div>

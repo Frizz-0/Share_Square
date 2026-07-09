@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Trash2, Edit2, FileText, Paperclip, Receipt, X, Image as ImageIcon, Check } from 'lucide-react';
+import { Trash2, Edit2, FileText, Paperclip, Receipt, X, Image as ImageIcon, Check, ChevronDown } from 'lucide-react';
 import type { Expense, CurrencyCode, SplitType, Roommate } from '../types';
+import ConfirmDialog from './ConfirmDialog';
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
     GBP: '£', USD: '$', EUR: '€', INR: '₹', JPY: '¥'
@@ -33,8 +34,12 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
     });
     const [editAttachedFile, setEditAttachedFile] = useState<string>('');
     const [editSelectiveMembers, setEditSelectiveMembers] = useState<Record<string, boolean>>({});
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+    const [expandedBundles, setExpandedBundles] = useState<Record<string, boolean>>({ 'This Month': true });
 
-    const scopedExpenses = expenses.filter(e => e.groupId === activeGroupId && e.instanceId === activeInstanceId);
+    const scopedExpenses = [...expenses]
+        .filter(e => e.groupId === activeGroupId && e.instanceId === activeInstanceId)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const groupIntoTimelineBundles = (items: Expense[]) => {
         const bundles: Record<string, Expense[]> = {};
@@ -51,6 +56,10 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
             bundles[label].push(item);
         });
         return bundles;
+    };
+
+    const toggleBundle = (label: string) => {
+        setExpandedBundles(prev => ({ ...prev, [label]: !(prev[label] ?? false) }));
     };
 
     const getEditUnallocatedPoolAmount = (): number => {
@@ -159,12 +168,21 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                 </div>
             ) : (
                 <div className="space-y-5">
-                    {Object.entries(timelineBundles).map(([bundleLabel, groupItems]) => (
+                    {Object.entries(timelineBundles).map(([bundleLabel, groupItems]) => {
+                        const isExpanded = expandedBundles[bundleLabel] ?? false;
+                        return (
                         <div key={bundleLabel} className="space-y-2">
-                            <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider bg-stone-100 px-2.5 py-1 rounded-md border inline-block w-fit">
+                            <button
+                                type="button"
+                                onClick={() => toggleBundle(bundleLabel)}
+                                className="flex items-center gap-1.5 text-[10px] font-black text-stone-500 uppercase tracking-wider bg-stone-100 px-2.5 py-1 rounded-md border w-fit"
+                            >
                                 {bundleLabel}
-                            </span>
+                                <span className="text-stone-400">({groupItems.length})</span>
+                                <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </button>
 
+                            {isExpanded && (
                             <div className="space-y-2">
                                 {groupItems.map(exp => (
                                     <div key={exp.id} className={`p-4 rounded-2xl border flex flex-col gap-2 ${exp.isSettlement ? 'bg-stone-50/60 border-stone-200/80 shadow-inner' : 'bg-white border-stone-200/60 shadow-sm'}`}>
@@ -178,7 +196,7 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                                 {!exp.isSettlement && (
                                                     <div className="flex items-center ml-1 bg-stone-50 border rounded-xl overflow-hidden shadow-sm">
                                                         <button type="button" onClick={() => handleOpenEdit(exp)} className="p-2 text-stone-500 hover:text-emerald-800 hover:bg-stone-100 transition-colors"><Edit2 size={13} /></button>
-                                                        <button type="button" onClick={() => onDeleteExpense(exp.id)} className="p-2 text-stone-500 hover:text-rose-600 hover:bg-stone-100 transition-colors border-l"><Trash2 size={13} /></button>
+                                                        <button type="button" onClick={() => setPendingDeleteId(exp.id)} className="p-2 text-stone-500 hover:text-rose-600 hover:bg-stone-100 transition-colors border-l"><Trash2 size={13} /></button>
                                                     </div>
                                                 )}
                                             </div>
@@ -201,9 +219,20 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                     </div>
                                 ))}
                             </div>
+                            )}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
+            )}
+
+            {pendingDeleteId !== null && (
+                <ConfirmDialog
+                    title="Delete this expense?"
+                    message="This will permanently remove the expense for everyone in the group."
+                    onConfirm={() => { onDeleteExpense(pendingDeleteId); setPendingDeleteId(null); }}
+                    onCancel={() => setPendingDeleteId(null)}
+                />
             )}
 
             {/* 🛠️ PARITY UPGRADE: Modify Transaction now features the exact options blueprint as creating a bill */}
@@ -254,8 +283,8 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                                 onChange={(e) => setEditSelectiveMembers({ ...editSelectiveMembers, [m.name]: e.target.checked })}
                                                 className="rounded text-emerald-700 h-4 w-4 focus:ring-0"
                                             />
-                                            <label htmlFor={`edit-select-${m.name}`} className="text-sm font-bold text-stone-700 select-none cursor-pointer flex items-center gap-1.5">
-                                                <span>{m.avatar}</span> <span>{m.name}</span>
+                                            <label htmlFor={`edit-select-${m.name}`} className="text-sm font-bold text-stone-700 select-none cursor-pointer">
+                                                {m.name}
                                             </label>
                                         </div>
                                     ))}
