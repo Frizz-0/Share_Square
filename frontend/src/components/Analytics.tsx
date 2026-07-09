@@ -106,7 +106,7 @@ export default function Analytics({
                                 const shareValue = analyticsMemberSharesMap[m.name] || 0;
                                 const percentage = totalAnalyticsSpendingGBP > 0 ? (shareValue / totalAnalyticsSpendingGBP) * 100 : 0;
                                 return (
-                                    <div key={m.id} className="space-y-1.5">
+                                    <div key={m.clerkId} className="space-y-1.5">
                                         <div className="flex justify-between text-xs font-black">
                                             <span className="text-stone-300 flex items-center gap-1"><span>{m.avatar}</span> {m.name}</span>
                                             <span className="text-stone-200">£{shareValue.toFixed(2)} <span className="text-[10px] text-stone-500">({percentage.toFixed(0)}%)</span></span>

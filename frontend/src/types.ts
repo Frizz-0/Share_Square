@@ -1,7 +1,7 @@
 export interface Roommate {
-    id: number;
     name: string;
     avatar: string;
+    clerkId: string;
 }
 
 export interface GroupInstance {
@@ -13,7 +13,8 @@ export interface Group {
     id: string;
     name: string;
     icon: string;
-    memberIds: number[];
+    inviteCode?: string;
+    memberIds: string[];
     instances: GroupInstance[];
 }
 

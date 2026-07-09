@@ -171,10 +171,10 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                         <div className="flex justify-between items-center">
                                             <div>
                                                 <h4 className="font-bold text-stone-800 text-base">{exp.title}</h4>
-                                                <p className="text-xs text-stone-400 mt-0.5">Paid by <span className="font-semibold text-stone-600">{exp.paidBy}</span> • Native: {CURRENCY_SYMBOLS[exp.currency]}{exp.amount.toFixed(2)}</p>
+                                                <p className="text-xs text-stone-400 mt-0.5">Paid by <span className="font-semibold text-stone-600">{exp.paidBy}</span> • Native: {CURRENCY_SYMBOLS[exp.currency]}{(exp.convertedAmountGBP || exp.amount || 0).toFixed(2)}</p>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-black text-stone-800 text-base">£{exp.convertedAmountGBP.toFixed(2)}</span>
+                                                <span className="font-black text-stone-800 text-base">£{(exp.convertedAmountGBP || exp.amount || 0).toFixed(2)}</span>
                                                 {!exp.isSettlement && (
                                                     <div className="flex items-center ml-1 bg-stone-50 border rounded-xl overflow-hidden shadow-sm">
                                                         <button type="button" onClick={() => handleOpenEdit(exp)} className="p-2 text-stone-500 hover:text-emerald-800 hover:bg-stone-100 transition-colors"><Edit2 size={13} /></button>
@@ -231,7 +231,7 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                 <div>
                                     <label className="block text-[11px] font-black text-stone-400 uppercase mb-1">Paid By</label>
                                     <select value={editForm.paidBy} onChange={(e) => setEditForm({ ...editForm, paidBy: e.target.value, customValues: {} })} className="w-full bg-stone-50 border rounded-2xl p-3.5 font-bold text-sm focus:outline-none">
-                                        {activeMembers.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
+                                        {activeMembers.map(m => <option key={m.clerkId} value={m.name}>{m.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
@@ -246,7 +246,7 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                 <div className="p-4 bg-stone-50 rounded-2xl space-y-2.5 border border-stone-100">
                                     <p className="text-[10px] font-black text-stone-400 uppercase tracking-wide mb-1">Select who is included in this bill:</p>
                                     {activeMembers.map(m => (
-                                        <div key={m.id} className="flex items-center gap-3 py-1">
+                                        <div key={m.clerkId} className="flex items-center gap-3 py-1">
                                             <input
                                                 type="checkbox"
                                                 id={`edit-select-${m.name}`}
@@ -272,11 +272,11 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                     <div className="flex justify-between items-center mb-1">
                                         <p className="text-[10px] font-black text-stone-400 uppercase tracking-wide">Adjust targets (Unassigned rolls to Payer)</p>
                                         <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold ${getEditUnallocatedPoolAmount() === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-400'}`}>
-                                            Remaining: {CURRENCY_SYMBOLS[editForm.currency]}{getEditUnallocatedPoolAmount().toFixed(2)}
+                                            Remaining: {CURRENCY_SYMBOLS[editForm.currency]}{(getEditUnallocatedPoolAmount() || 0).toFixed(2)}
                                         </span>
                                     </div>
                                     {activeMembers.map(m => (
-                                        <div key={m.id} className="flex items-center justify-between gap-2 text-base">
+                                        <div key={m.clerkId} className="flex items-center justify-between gap-2 text-base">
                                             <span className="font-bold text-stone-700">{m.name}</span>
                                             <div className="relative">
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-xs font-bold">{CURRENCY_SYMBOLS[editForm.currency]}</span>
