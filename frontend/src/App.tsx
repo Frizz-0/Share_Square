@@ -79,6 +79,23 @@ export default function App() {
       .catch(err => console.error("FX sync delay:", err));
   }, []);
 
+  // 💡 The "Paid By" / settle pickers used to default to the literal placeholder
+  // strings 'You'/'Alex', which never matched a real member's name once real
+  // group members loaded — silently breaking every debt calculation. Keep
+  // them pointed at real members as soon as the roster is known.
+  useEffect(() => {
+    if (activeMembers.length === 0) return;
+    const selfName = activeMembers.find(m => m.clerkId === user?.id)?.name || activeMembers[0].name;
+
+    setNewExpense(prev => activeMembers.some(m => m.name === prev.paidBy) ? prev : { ...prev, paidBy: selfName });
+
+    setCustomSettlePayer(prev => activeMembers.some(m => m.name === prev) ? prev : selfName);
+    setCustomSettleReceiver(prev => {
+      if (activeMembers.some(m => m.name === prev) && prev !== selfName) return prev;
+      return activeMembers.find(m => m.name !== selfName)?.name || selfName;
+    });
+  }, [activeMembers, user]);
+
   // ☁️ Load the groups this signed-in user actually belongs to
   useEffect(() => {
     if (!isUserLoaded) return;
@@ -136,21 +153,26 @@ export default function App() {
         }
 
         if (payloadData.expenses && Array.isArray(payloadData.expenses)) {
-          const sanitized: Expense[] = payloadData.expenses.map((item: any) => ({
-            id: item.expenseId || item.id,
-            groupId: item.groupId,
-            instanceId: item.instanceId,
-            title: item.title,
-            paidBy: item.paidBy,
-            amount: item.amount,
-            currency: item.currency,
-            convertedAmountGBP: item.convertedAmountGBP,
-            date: item.date,
-            splitType: item.splitType,
-            splits: item.splits,
-            attachmentName: item.attachmentName || undefined,
-            isSettlement: item.isSettlement || undefined
-          }));
+          // const sanitized: Expense[] = payloadData.expenses.map((item: any) => ({
+          const sanitized: Expense[] = payloadData.expenses
+            .filter((item: any) => item.title && item.amount !== undefined)
+            .map((item: any) => ({
+              id: item.expenseId || item.id,
+              groupId: item.groupId,
+              instanceId: item.instanceId,
+              title: item.title,
+              paidBy: item.paidBy,
+              amount: item.amount,
+              currency: item.currency,
+              convertedAmountGBP: item.convertedAmountGBP,
+              date: item.date,
+              splitType: item.splitType,
+              splits: item.splits,
+              attachmentName: item.attachmentName || undefined,
+              isSettlement: item.isSettlement || undefined,
+              isRecurring: item.isRecurring || undefined,
+              recurringDay: item.recurringDay || undefined
+            }));
           setExpenses(sanitized);
         }
       } catch (err) {
@@ -376,7 +398,9 @@ export default function App() {
       convertedAmountGBP: amountInGBP,
       splitType: newExpense.splitType,
       splits: computedSplitsGBP,
-      attachmentName: modalAttachedFile || null
+      attachmentName: modalAttachedFile || null,
+      isRecurring: newExpense.isRecurring,
+      recurringDay: newExpense.isRecurring ? parseInt(newExpense.recurringDay) : undefined
     };
 
     try {
@@ -393,13 +417,15 @@ export default function App() {
         date: savedItem.date || new Date().toISOString(),
         splitType: (savedItem.splitType as SplitType) || newExpense.splitType,
         splits: savedItem.splits || computedSplitsGBP,
-        attachmentName: savedItem.attachmentName || undefined
+        attachmentName: savedItem.attachmentName || undefined,
+        isRecurring: savedItem.isRecurring || undefined,
+        recurringDay: savedItem.recurringDay || undefined
       };
 
       setExpenses(prev => [sanitizedFrontendItem, ...prev]);
       setIsExpenseModalOpen(false);
       pushLog('EXPENSE_CREATED', `Logged bill: "${sanitizedFrontendItem.title}" paid by ${sanitizedFrontendItem.paidBy} worth £${sanitizedFrontendItem.convertedAmountGBP.toFixed(2)}`);
-      setNewExpense({ title: '', amount: '', currency: 'GBP', paidBy: 'You', note: '', splitType: 'EQUAL', isRecurring: false, recurringDay: '1', customValues: {}, icon: '💸' });
+      setNewExpense({ title: '', amount: '', currency: 'GBP', paidBy: newExpense.paidBy, note: '', splitType: 'EQUAL', isRecurring: false, recurringDay: '1', customValues: {}, icon: '💸' });
       setModalAttachedFile('');
     } catch (err) {
       alert("Network synchronization failed.");
@@ -452,9 +478,14 @@ export default function App() {
 
   const handleDeleteExpense = async (id: number) => {
     if (!user) return;
+
+    const targetExpense = expenses.find(e => e.id === id);
+    if (!targetExpense) return;
+
     try {
       setExpenses(prev => prev.filter(e => e.id !== id));
-      await deleteExpenseApi(activeGroupId, id, user.id);
+      // await deleteExpenseApi(activeGroupId, id, user.id);
+      await deleteExpenseApi(targetExpense.groupId, targetExpense.id, user.id);
       pushLog('EXPENSE_DELETED', `Removed transaction token ${id}`);
     } catch (err) {
       console.error("Cloud delete failed:", err);

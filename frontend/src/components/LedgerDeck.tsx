@@ -202,6 +202,16 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                                             </div>
                                         </div>
 
+                                        {!exp.isSettlement && exp.splits && (
+                                            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-stone-100">
+                                                {Object.entries(exp.splits).filter(([, share]) => share > 0.01).map(([name, share]) => (
+                                                    <span key={name} className="text-[10px] font-bold text-stone-500 bg-stone-50 px-2 py-1 rounded-lg border">
+                                                        {name} owes £{share.toFixed(2)}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
                                         {(exp.note || exp.attachmentName) && (
                                             <div className="flex flex-wrap gap-1.5 pt-0.5">
                                                 {exp.note && (

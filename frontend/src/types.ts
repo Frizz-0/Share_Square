@@ -27,7 +27,8 @@ export interface Expense {
     groupId: string;
     instanceId: string;
     title: string;
-    paidBy: string; // Dynamic trace key matching Roommate.name strings
+    paidBy: string;
+    userId?: string;
     amount: number;
     currency: CurrencyCode;
     convertedAmountGBP: number;

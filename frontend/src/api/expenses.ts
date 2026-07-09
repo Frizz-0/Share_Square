@@ -27,6 +27,6 @@ export async function deleteExpense(groupId: string, expenseId: number, userId: 
   return fetch(`${AWS_API_GATEWAY_URL}/expenses`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ groupId, expenseId, userId })
+    body: JSON.stringify({ groupId, expenseId: String(expenseId), userId })
   });
 }

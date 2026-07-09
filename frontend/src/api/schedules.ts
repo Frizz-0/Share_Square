@@ -4,8 +4,8 @@ export interface Schedule {
   groupId: string;
   expenseId: string;
   title: string;
-  amount: number;
-  dueDay: number;
+  eventDate: string;
+  note: string;
   createdBy: string;
   date: string;
 }
@@ -17,11 +17,11 @@ export async function fetchSchedules(groupId: string, userId: string): Promise<S
   return data.schedules || [];
 }
 
-export async function createSchedule(groupId: string, userId: string, title: string, amount: number, dueDay: number): Promise<Schedule> {
+export async function createSchedule(groupId: string, userId: string, title: string, eventDate: string, note?: string): Promise<Schedule> {
   const response = await fetch(`${AWS_API_GATEWAY_URL}/schedules`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ groupId, userId, title, amount, dueDay })
+    body: JSON.stringify({ groupId, userId, title, eventDate, note })
   });
   if (!response.ok) throw new Error("Failed to create schedule.");
   return response.json();

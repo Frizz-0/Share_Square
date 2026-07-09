@@ -54,10 +54,14 @@ export function getMinimizedDebts(
 
   targetedExpenses.forEach(exp => {
     if (!exp.splits) return;
+
     activeMembers.forEach(m => {
       const share = exp.splits[m.name] || 0;
-      if (exp.paidBy === m.name) netBalances[m.name] += (exp.convertedAmountGBP - share);
-      else netBalances[m.name] -= share;
+      if (exp.paidBy === m.name) {
+        netBalances[m.name] += (exp.convertedAmountGBP - share);
+      } else {
+        netBalances[m.name] -= share;
+      }
     });
   });
 
@@ -94,8 +98,8 @@ export function computeUserNetGBP(
     .filter(e => e.groupId === activeGroupId && e.instanceId === activeInstanceId)
     .forEach(exp => {
       if (!exp.splits) return;
-      const share = exp.splits[activeUserName] || exp.splits['You'] || 0;
-      if (exp.paidBy === activeUserName || exp.paidBy === 'You') {
+      const share = exp.splits[activeUserName] || 0;
+      if (exp.paidBy === activeUserName) {
         balanceGBP += (exp.convertedAmountGBP - share);
       } else {
         balanceGBP -= share;

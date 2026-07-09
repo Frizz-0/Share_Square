@@ -160,7 +160,7 @@ export default function AddExpenseModal({
             )}
           </div>
 
-          <div className="p-3 bg-emerald-50 text-center text-xs text-emerald-950 font-bold rounded-2xl border border-emerald-100/40">Normalized Baseline Value: ~£{newExpense.amount ? convertToGBP(parseFloat(newExpense.amount), newExpense.currency).toFixed(2) : '0.00'} GBP</div>
+          <div className="bg-emerald-50 text-center text-xs text-emerald-950 font-bold rounded-2xl border border-emerald-100/40">Normalized Baseline Value: ~£{newExpense.amount ? convertToGBP(parseFloat(newExpense.amount), newExpense.currency).toFixed(2) : '0.00'} GBP</div>
           <button type="submit" disabled={newExpense.splitType === 'EXACT' && unallocated !== 0} className={`w-full font-black py-4 rounded-2xl text-base shadow-md transition-all ${newExpense.splitType === 'EXACT' && unallocated !== 0 ? 'bg-stone-200 text-stone-400 cursor-not-allowed shadow-none' : 'bg-emerald-950 text-white'}`}><Check size={16} strokeWidth={3} className="inline mr-1" /> Commit & Divide</button>
         </form>
       </div>
