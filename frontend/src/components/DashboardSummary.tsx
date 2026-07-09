@@ -1,4 +1,4 @@
-import { Plus, CreditCard, BarChart3, ShieldAlert, ArrowRight, Users, Repeat, Megaphone } from 'lucide-react';
+import { Plus, CreditCard, BarChart3, ShieldAlert, ArrowRight, Users, Repeat, Megaphone, ChevronRight } from 'lucide-react';
 import type { DirectDebt, Expense } from '../types';
 
 interface Props {
@@ -12,11 +12,12 @@ interface Props {
   onOpenAudit: () => void;
   onOpenNotices: () => void;
   onPayDebt: (debt: DirectDebt) => void;
+  onSelectExpense: (exp: Expense) => void;
 }
 
 export default function DashboardSummary({
   groupName, currentYourNetGBP, minimizedDebts, recurringExpenses,
-  onAddBill, onPaidBack, onOpenAnalytics, onOpenAudit, onOpenNotices, onPayDebt
+  onAddBill, onPaidBack, onOpenAnalytics, onOpenAudit, onOpenNotices, onPayDebt, onSelectExpense
 }: Props) {
   return (
     <>
@@ -77,13 +78,16 @@ export default function DashboardSummary({
         ) : (
           <div className="space-y-2.5">
             {recurringExpenses.map((exp) => (
-              <div key={exp.id} className="p-4 bg-white border border-stone-200 rounded-2xl flex items-center justify-between text-sm shadow-sm">
+              <button key={exp.id} onClick={() => onSelectExpense(exp)} className="w-full p-4 bg-white border border-stone-200 rounded-2xl flex items-center justify-between text-sm shadow-sm text-left hover:bg-stone-50/60 transition-colors">
                 <div className="flex items-center gap-2 text-stone-700 font-bold">
                   <span>{exp.title}</span>
                   <span className="text-[10px] font-black text-stone-400 bg-stone-50 px-2 py-0.5 rounded-md border">Day {exp.recurringDay ?? 1}</span>
                 </div>
-                <span className="font-black text-stone-800 text-base">£{exp.convertedAmountGBP.toFixed(2)}</span>
-              </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-stone-800 text-base">£{exp.convertedAmountGBP.toFixed(2)}</span>
+                  <ChevronRight size={16} className="text-stone-300" />
+                </div>
+              </button>
             ))}
           </div>
         )}

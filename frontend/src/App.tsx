@@ -7,6 +7,7 @@ import DashboardSummary from './components/DashboardSummary';
 import OnboardingScreen from './components/OnboardingScreen';
 import NoticesSchedule from './components/NoticesSchedule';
 import ConfirmDialog from './components/ConfirmDialog';
+import ExpenseDetailModal from './components/ExpenseDetailModal';
 import { CreateGroupModal, CreateInstanceModal, GroupSettingsModal, AuditModal } from './components/modals/GroupModals';
 import { SettleModal, CustomSettleModal } from './components/modals/SettleModals';
 import AddExpenseModal, { type NewExpenseForm } from './components/modals/AddExpenseModal';
@@ -53,6 +54,7 @@ export default function App() {
 
   const [settleTarget, setSettleTarget] = useState<DirectDebt | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [newInstanceName, setNewInstanceName] = useState('');
   const [editGroupName, setEditGroupName] = useState('');
@@ -560,6 +562,7 @@ export default function App() {
                 onOpenAudit={() => setIsAuditModalOpen(true)}
                 onOpenNotices={() => setViewMode('NOTICES')}
                 onPayDebt={(debt) => { setSettleTarget(debt); setIsSettleModalOpen(true); }}
+                onSelectExpense={setViewingExpense}
               />
 
               <LedgerDeck
@@ -568,9 +571,7 @@ export default function App() {
                 activeInstanceId={activeInstanceId}
                 activeMembers={activeMembers}
                 currentUserName={selfName}
-                fxRates={fxRates}
-                onDeleteExpense={handleDeleteExpense}
-                onUpdateExpense={handleUpdateExpense}
+                onSelectExpense={setViewingExpense}
               />
             </main>
           </>
@@ -653,6 +654,18 @@ export default function App() {
             message={confirmDialog.message}
             onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
             onCancel={() => setConfirmDialog(null)}
+          />
+        )}
+
+        {viewingExpense && (
+          <ExpenseDetailModal
+            expense={viewingExpense}
+            activeMembers={activeMembers}
+            currentUserName={selfName}
+            fxRates={fxRates}
+            onClose={() => setViewingExpense(null)}
+            onUpdateExpense={handleUpdateExpense}
+            onDeleteExpense={handleDeleteExpense}
           />
         )}
 
