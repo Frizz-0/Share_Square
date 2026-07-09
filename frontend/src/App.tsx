@@ -137,8 +137,8 @@ export default function App() {
   useEffect(() => {
     if (!user || !activeGroupId) return;
 
-    const hydrate = async () => {
-      setIsLoading(true);
+    const hydrate = async (showLoading: boolean) => {
+      if (showLoading) setIsLoading(true);
       try {
         const payloadData = await fetchGroupData(activeGroupId, user.id);
 
@@ -178,11 +178,13 @@ export default function App() {
       } catch (err) {
         console.error("Cloud database hydration failed:", err);
       } finally {
-        setIsLoading(false);
+        if (showLoading) setIsLoading(false);
       }
     };
 
-    hydrate();
+    hydrate(true);
+    const pollId = setInterval(() => hydrate(false), 6000);
+    return () => clearInterval(pollId);
   }, [user, activeGroupId]);
 
   const convertToGBP = (amount: number, fromCurrency: CurrencyCode): number => convertToGBPRate(amount, fromCurrency, fxRates);
