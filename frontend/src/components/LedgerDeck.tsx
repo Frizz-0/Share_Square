@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Edit2, FileText, Paperclip, Receipt, X, Image as ImageIcon, Check, ChevronDown } from 'lucide-react';
+import { Trash2, Receipt, X, Image as ImageIcon, Check, ChevronDown, ChevronRight, Edit2, FileText, Paperclip } from 'lucide-react';
 import type { Expense, CurrencyCode, SplitType, Roommate } from '../types';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -7,18 +7,29 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
     GBP: '£', USD: '$', EUR: '€', INR: '₹', JPY: '¥'
 };
 
+const DOT_COLORS = ['bg-emerald-500', 'bg-orange-500', 'bg-sky-500', 'bg-rose-500', 'bg-purple-500', 'bg-amber-500', 'bg-teal-500', 'bg-fuchsia-500'];
+
+// Splits a title like "🍕 Pizza Night" into its leading icon and the rest of the text
+function splitLeadingIcon(title: string): { icon: string; text: string } {
+    const match = title.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*(.*)$/u);
+    if (match) return { icon: match[1], text: match[2] || title };
+    return { icon: '💸', text: title };
+}
+
 interface LedgerDeckProps {
     expenses: Expense[];
     activeGroupId: string;
     activeInstanceId: string;
     activeMembers: Roommate[]; // Passed down to populate split selectors inside edit forms
+    currentUserName: string;
     onDeleteExpense: (id: number) => void;
     onUpdateExpense: (updated: Expense) => void;
     fxRates: Record<string, number>;
 }
 
-export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, activeMembers, onDeleteExpense, onUpdateExpense, fxRates }: LedgerDeckProps) {
+export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, activeMembers, currentUserName, onDeleteExpense, onUpdateExpense, fxRates }: LedgerDeckProps) {
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+    const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
 
     // Fully mirrored state tracking parameters matching the creation modal factory
     const [editForm, setEditForm] = useState({
@@ -171,66 +182,66 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                     {Object.entries(timelineBundles).map(([bundleLabel, groupItems]) => {
                         const isExpanded = expandedBundles[bundleLabel] ?? false;
                         return (
-                        <div key={bundleLabel} className="space-y-2">
-                            <button
-                                type="button"
-                                onClick={() => toggleBundle(bundleLabel)}
-                                className="flex items-center gap-1.5 text-[10px] font-black text-stone-500 uppercase tracking-wider bg-stone-100 px-2.5 py-1 rounded-md border w-fit"
-                            >
-                                {bundleLabel}
-                                <span className="text-stone-400">({groupItems.length})</span>
-                                <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                            </button>
+                            <div key={bundleLabel} className="space-y-2">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleBundle(bundleLabel)}
+                                    className="flex items-center gap-1.5 text-[10px] font-black text-stone-500 uppercase tracking-wider bg-stone-100 px-2.5 py-1 rounded-md border w-fit"
+                                >
+                                    {bundleLabel}
+                                    <span className="text-stone-400">({groupItems.length})</span>
+                                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                </button>
 
-                            {isExpanded && (
-                            <div className="space-y-2">
-                                {groupItems.map(exp => (
-                                    <div key={exp.id} className={`p-4 rounded-2xl border flex flex-col gap-2 ${exp.isSettlement ? 'bg-stone-50/60 border-stone-200/80 shadow-inner' : 'bg-white border-stone-200/60 shadow-sm'}`}>
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <h4 className="font-bold text-stone-800 text-base">{exp.title}</h4>
-                                                <p className="text-xs text-stone-400 mt-0.5">Paid by <span className="font-semibold text-stone-600">{exp.paidBy}</span> • Native: {CURRENCY_SYMBOLS[exp.currency]}{(exp.convertedAmountGBP || exp.amount || 0).toFixed(2)}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-black text-stone-800 text-base">£{(exp.convertedAmountGBP || exp.amount || 0).toFixed(2)}</span>
-                                                {!exp.isSettlement && (
-                                                    <div className="flex items-center ml-1 bg-stone-50 border rounded-xl overflow-hidden shadow-sm">
-                                                        <button type="button" onClick={() => handleOpenEdit(exp)} className="p-2 text-stone-500 hover:text-emerald-800 hover:bg-stone-100 transition-colors"><Edit2 size={13} /></button>
-                                                        <button type="button" onClick={() => setPendingDeleteId(exp.id)} className="p-2 text-stone-500 hover:text-rose-600 hover:bg-stone-100 transition-colors border-l"><Trash2 size={13} /></button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
+                                {isExpanded && (
+                                    <div className="space-y-1">
+                                        {groupItems.map(exp => {
+                                            const { icon, text } = splitLeadingIcon(exp.title);
+                                            const d = new Date(exp.date);
+                                            const selfShare = exp.splits?.[currentUserName] || 0;
+                                            const iPaid = exp.paidBy === currentUserName;
+                                            const netForMe = iPaid ? (exp.convertedAmountGBP || exp.amount || 0) - selfShare : -selfShare;
+                                            const isInvolved = iPaid || selfShare > 0.01;
 
-                                        {!exp.isSettlement && exp.splits && (
-                                            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-stone-100">
-                                                {Object.entries(exp.splits).filter(([, share]) => share > 0.01).map(([name, share]) => (
-                                                    <span key={name} className="text-[10px] font-bold text-stone-500 bg-stone-50 px-2 py-1 rounded-lg border">
-                                                        {name} owes £{share.toFixed(2)}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
+                                            return (
+                                                <button
+                                                    key={exp.id}
+                                                    type="button"
+                                                    onClick={() => setViewingExpense(exp)}
+                                                    className={`w-full p-3 rounded-2xl border flex items-center gap-3 text-left transition-colors ${exp.isSettlement ? 'bg-stone-50/60 border-stone-200/80' : 'bg-white border-stone-200/60 hover:bg-stone-50/60'}`}
+                                                >
+                                                    <div className="flex flex-col items-center justify-center w-7 shrink-0 text-stone-400">
+                                                        <span className="text-[9px] font-black uppercase">{d.toLocaleDateString([], { month: 'short' })}</span>
+                                                        <span className="text-lg font-black text-stone-700 leading-none">{d.getDate()}</span>
+                                                    </div>
 
-                                        {(exp.note || exp.attachmentName) && (
-                                            <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                                {exp.note && (
-                                                    <div className="flex items-center gap-1 text-[11px] text-stone-500 bg-stone-50 px-2 py-0.5 rounded-lg border w-fit">
-                                                        <FileText size={10} /> <span className="italic">"{exp.note}"</span>
+                                                    <div className="w-9 h-9 rounded-xl bg-stone-50 flex items-center justify-center text-base shrink-0">{icon}</div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-bold text-stone-800 text-sm truncate">{text}</h4>
+                                                        <p className="text-xs text-stone-400 truncate">
+                                                            {iPaid ? 'You' : exp.paidBy} paid {CURRENCY_SYMBOLS[exp.currency]}{(exp.amount || 0).toFixed(2)}
+                                                        </p>
                                                     </div>
-                                                )}
-                                                {exp.attachmentName && (
-                                                    <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100/40 w-fit">
-                                                        <Paperclip size={10} /> {exp.attachmentName}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+
+                                                    {!exp.isSettlement && isInvolved && (
+                                                        <div className="text-right shrink-0">
+                                                            <p className={`text-[10px] font-black uppercase ${netForMe >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                                                {netForMe >= 0 ? 'you lent' : 'you owe'}
+                                                            </p>
+                                                            <p className={`text-sm font-black ${netForMe >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                                                £{Math.abs(netForMe).toFixed(2)}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    <ChevronRight size={16} className="text-stone-300 shrink-0" />
+                                                </button>
+                                            );
+                                        })}
                                     </div>
-                                ))}
+                                )}
                             </div>
-                            )}
-                        </div>
                         );
                     })}
                 </div>
@@ -244,6 +255,81 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
                     onCancel={() => setPendingDeleteId(null)}
                 />
             )}
+
+            {viewingExpense && (() => {
+                const { icon, text } = splitLeadingIcon(viewingExpense.title);
+                const shares = Object.entries(viewingExpense.splits || {}).filter(([, share]) => share > 0.01);
+                return (
+                    <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-md flex items-end justify-center z-50 p-4">
+                        <div className="bg-white w-full max-w-md rounded-[32px] overflow-hidden max-h-[85vh] flex flex-col relative border shadow-2xl animate-slide-up">
+                            <div className="bg-emerald-900 text-white p-5 flex items-center justify-between shrink-0">
+                                <button type="button" onClick={() => setViewingExpense(null)} className="p-2 hover:bg-white/10 rounded-full"><X size={18} /></button>
+                                <h3 className="font-black text-base">Details</h3>
+                                <div className="flex items-center gap-1">
+                                    {!viewingExpense.isSettlement && (
+                                        <button type="button" onClick={() => { handleOpenEdit(viewingExpense); setViewingExpense(null); }} className="p-2 hover:bg-white/10 rounded-full"><Edit2 size={16} /></button>
+                                    )}
+                                    <button type="button" onClick={() => { setPendingDeleteId(viewingExpense.id); setViewingExpense(null); }} className="p-2 hover:bg-white/10 rounded-full"><Trash2 size={16} /></button>
+                                </div>
+                            </div>
+
+                            <div className="p-6 space-y-5 overflow-y-auto">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-11 h-11 rounded-2xl bg-stone-50 border flex items-center justify-center text-xl shrink-0">{icon}</div>
+                                    <div>
+                                        <h4 className="text-lg font-black text-stone-800 leading-tight">{text}</h4>
+                                        <p className="text-2xl font-black text-stone-900 mt-0.5">{CURRENCY_SYMBOLS[viewingExpense.currency]}{viewingExpense.amount.toFixed(2)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="text-xs text-stone-400 space-y-0.5">
+                                    <p>Logged on {new Date(viewingExpense.date).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                                    {viewingExpense.isRecurring && <p className="font-bold text-emerald-700">Recurring on day {viewingExpense.recurringDay ?? 1} of each month</p>}
+                                </div>
+
+                                {(viewingExpense.note || viewingExpense.attachmentName) && (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {viewingExpense.note && (
+                                            <div className="flex items-center gap-1 text-[11px] text-stone-500 bg-stone-50 px-2 py-1 rounded-lg border w-fit">
+                                                <FileText size={11} /> <span className="italic">"{viewingExpense.note}"</span>
+                                            </div>
+                                        )}
+                                        {viewingExpense.attachmentName && (
+                                            <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100/40 w-fit">
+                                                <Paperclip size={11} /> {viewingExpense.attachmentName}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {!viewingExpense.isSettlement && (
+                                    <div className="border-t border-stone-100 pt-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-white text-[10px] font-black shrink-0">
+                                                {viewingExpense.paidBy.slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <p className="text-sm font-bold text-stone-700">
+                                                {viewingExpense.paidBy === currentUserName ? 'You' : viewingExpense.paidBy} paid {CURRENCY_SYMBOLS[viewingExpense.currency]}{viewingExpense.amount.toFixed(2)}
+                                            </p>
+                                        </div>
+
+                                        <div className="ml-4 mt-2 pl-4 border-l-2 border-stone-100 space-y-2.5">
+                                            {shares.map(([name, share], idx) => (
+                                                <div key={name} className="flex items-center gap-2.5">
+                                                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${DOT_COLORS[idx % DOT_COLORS.length]}`} />
+                                                    <p className="text-sm text-stone-600">
+                                                        <span className="font-bold text-stone-800">{name === currentUserName ? 'You' : name}</span> {name === currentUserName ? 'owe' : 'owes'} £{share.toFixed(2)}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* 🛠️ PARITY UPGRADE: Modify Transaction now features the exact options blueprint as creating a bill */}
             {editingExpense && (
@@ -352,6 +438,14 @@ export default function LedgerDeck({ expenses, activeGroupId, activeInstanceId, 
 
                             <button type="submit" disabled={editForm.splitType === 'EXACT' && getEditUnallocatedPoolAmount() !== 0} className={`w-full font-black py-4 rounded-2xl text-base shadow-md transition-all ${editForm.splitType === 'EXACT' && getEditUnallocatedPoolAmount() !== 0 ? 'bg-stone-200 text-stone-400 cursor-not-allowed shadow-none' : 'bg-emerald-950 text-white'}`}><Check size={16} strokeWidth={3} className="inline mr-1" /> Update and Sync</button>
                         </form>
+
+                        <button
+                            type="button"
+                            onClick={() => { setPendingDeleteId(editingExpense.id); setEditingExpense(null); }}
+                            className="w-full font-bold py-3 rounded-2xl text-sm text-rose-600 bg-rose-50 border border-rose-100 flex items-center justify-center gap-1.5"
+                        >
+                            <Trash2 size={14} /> Delete Expense
+                        </button>
                     </div>
                 </div>
             )}

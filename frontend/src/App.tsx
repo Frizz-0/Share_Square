@@ -71,6 +71,7 @@ export default function App() {
   const activeGroup = groups.find(g => g.id === activeGroupId) || groups[0];
   const isAdmin = activeGroup?.memberIds[0] === user?.id;
   const activeMembers = roommates;
+  const selfName = activeMembers.find(m => m.clerkId === user?.id)?.name || userDisplayName;
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/GBP')
@@ -201,7 +202,7 @@ export default function App() {
   };
 
   const minimizedDebts = activeGroup ? getMinimizedDebts(expenses, activeMembers, activeGroupId, activeInstanceId) : [];
-  const currentYourNetGBP = activeGroup ? computeUserNetGBP(expenses, activeGroupId, activeInstanceId, userDisplayName) : 0;
+  const currentYourNetGBP = activeGroup ? computeUserNetGBP(expenses, activeGroupId, activeInstanceId, selfName) : 0;
   const recurringExpenses = expenses.filter(e => e.isRecurring && e.groupId === activeGroupId);
 
   const handleCreateGroup = async (e: React.FormEvent) => {
@@ -566,6 +567,7 @@ export default function App() {
                 activeGroupId={activeGroupId}
                 activeInstanceId={activeInstanceId}
                 activeMembers={activeMembers}
+                currentUserName={selfName}
                 fxRates={fxRates}
                 onDeleteExpense={handleDeleteExpense}
                 onUpdateExpense={handleUpdateExpense}
