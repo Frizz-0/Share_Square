@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Paperclip, Check } from 'lucide-react';
 import type { CurrencyCode, Roommate, SplitType } from '../../types';
 import { CURRENCY_SYMBOLS, QUICK_ACTIONS_PRESETS } from '../../constants';
-import { getUnallocatedPoolAmount } from '../../utils/finance';
+import { getUnallocatedPoolAmount, recomputeExactSplit } from '../../utils/finance';
 
 export interface NewExpenseForm {
   title: string;
@@ -25,7 +25,6 @@ interface Props {
   setSelectiveMembers: (v: Record<string, boolean>) => void;
   modalAttachedFile: string;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onExactValueChange: (name: string, value: string) => void;
   convertToGBP: (amount: number, currency: CurrencyCode) => number;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
@@ -33,9 +32,35 @@ interface Props {
 
 export default function AddExpenseModal({
   activeMembers, newExpense, setNewExpense, selectiveMembers, setSelectiveMembers,
-  modalAttachedFile, onFileChange, onExactValueChange, convertToGBP, onSubmit, onClose
+  modalAttachedFile, onFileChange, convertToGBP, onSubmit, onClose
 }: Props) {
   const unallocated = getUnallocatedPoolAmount(newExpense.amount, newExpense.customValues, activeMembers);
+  const [touchedMembers, setTouchedMembers] = useState<Record<string, boolean>>({});
+
+  // Splitwise-style: re-balance everyone who hasn't been manually edited
+  // whenever the total amount, split type, or member list changes.
+  useEffect(() => {
+    if (newExpense.splitType !== 'EXACT') return;
+    const total = parseFloat(newExpense.amount) || 0;
+    const rebalanced = recomputeExactSplit(total, activeMembers, touchedMembers, newExpense.customValues);
+    setNewExpense({ ...newExpense, customValues: rebalanced });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newExpense.splitType, newExpense.amount, activeMembers.length]);
+
+  const handleExactChange = (name: string, value: string) => {
+    const nextTouched = { ...touchedMembers, [name]: true };
+    setTouchedMembers(nextTouched);
+    const total = parseFloat(newExpense.amount) || 0;
+    const rebalanced = recomputeExactSplit(total, activeMembers, nextTouched, { ...newExpense.customValues, [name]: value });
+    setNewExpense({ ...newExpense, customValues: rebalanced });
+  };
+
+  const handleResetSplit = () => {
+    setTouchedMembers({});
+    const total = parseFloat(newExpense.amount) || 0;
+    const rebalanced = recomputeExactSplit(total, activeMembers, {}, {});
+    setNewExpense({ ...newExpense, customValues: rebalanced });
+  };
 
   return (
     <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-end justify-center z-50 p-4">
@@ -88,7 +113,7 @@ export default function AddExpenseModal({
             <div>
               <label className="block text-[11px] font-black text-stone-400 uppercase mb-1">Split Method</label>
               <select value={newExpense.splitType} onChange={(e) => setNewExpense({ ...newExpense, splitType: e.target.value as SplitType, customValues: {} })} className="w-full bg-stone-50 border rounded-2xl px-2 py-3.5 text-base font-bold focus:outline-none">
-                <option value="EQUAL">Equally</option><option value="EXACT">Exact Values Assistant</option><option value="SELECTIVE">Unequally</option>
+                <option value="EQUAL">Equally</option><option value="EXACT">Exact</option><option value="SELECTIVE">Unequally</option>
               </select>
             </div>
             {newExpense.splitType === 'SELECTIVE' && (
@@ -118,18 +143,21 @@ export default function AddExpenseModal({
 
           {newExpense.splitType === 'EXACT' && (
             <div className="p-4 bg-stone-50 rounded-2xl space-y-3 border border-stone-100">
-              <div className="flex justify-between items-center mb-1">
-                <p className="text-[10px] font-black text-stone-400 uppercase tracking-wide">Assign targets</p>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold ${unallocated === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                  Remaining: {CURRENCY_SYMBOLS[newExpense.currency]}{unallocated.toFixed(2)}
-                </span>
+              <div className="flex justify-between items-center mb-1 gap-2">
+                <p className="text-[10px] font-black text-stone-400 uppercase tracking-wide">Adjust anyone's share</p>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button type="button" onClick={handleResetSplit} className="text-[10px] font-bold text-stone-500 underline underline-offset-2">Reset</button>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold ${unallocated === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                    Remaining: {CURRENCY_SYMBOLS[newExpense.currency]}{unallocated.toFixed(2)}
+                  </span>
+                </div>
               </div>
               {activeMembers.map(m => (
                 <div key={m.clerkId} className="flex items-center justify-between gap-2 text-base">
                   <span className="font-bold text-stone-700">{m.name}</span>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-xs font-bold">{CURRENCY_SYMBOLS[newExpense.currency]}</span>
-                    <input type="number" step="0.01" placeholder="0.00" disabled={m.name === newExpense.paidBy} value={newExpense.customValues[m.name] || ''} onChange={(e) => onExactValueChange(m.name, e.target.value)} className={`w-28 border rounded-xl py-2 pl-6 pr-3 text-right font-black text-sm ${m.name === newExpense.paidBy ? 'bg-stone-100 text-stone-400' : 'bg-white text-stone-800'}`} required />
+                    <input type="number" step="0.01" placeholder="0.00" value={newExpense.customValues[m.name] || ''} onChange={(e) => handleExactChange(m.name, e.target.value)} className="w-28 border rounded-xl py-2 pl-6 pr-3 text-right font-black text-sm bg-white text-stone-800" required />
                   </div>
                 </div>
               ))}

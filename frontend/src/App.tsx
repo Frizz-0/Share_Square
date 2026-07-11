@@ -369,14 +369,6 @@ export default function App() {
     }
   };
 
-  const handleExactValueChange = (targetMemberName: string, value: string) => {
-    const totalCost = parseFloat(newExpense.amount) || 0;
-    const updatedCustomValues = { ...newExpense.customValues, [targetMemberName]: value };
-    const configuredSum = Object.entries(updatedCustomValues).filter(([name]) => name !== newExpense.paidBy).reduce((sum, [_, val]) => sum + (parseFloat(val) || 0), 0);
-    updatedCustomValues[newExpense.paidBy] = Math.max(0, totalCost - configuredSum).toFixed(2);
-    setNewExpense({ ...newExpense, customValues: updatedCustomValues });
-  };
-
   const handleModalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) setModalAttachedFile(e.target.files[0].name);
   };
@@ -641,7 +633,6 @@ export default function App() {
             setSelectiveMembers={setSelectiveMembers}
             modalAttachedFile={modalAttachedFile}
             onFileChange={handleModalFileChange}
-            onExactValueChange={handleExactValueChange}
             convertToGBP={convertToGBP}
             onSubmit={handleCreateExpense}
             onClose={() => setIsExpenseModalOpen(false)}

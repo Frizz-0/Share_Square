@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Trash2, X, Image as ImageIcon, Check, Edit2, FileText, Paperclip } from 'lucide-react';
 import type { Expense, CurrencyCode, SplitType, Roommate } from '../types';
 import ConfirmDialog from './ConfirmDialog';
+import { recomputeExactSplit } from '../utils/finance';
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
     GBP: '£', USD: '$', EUR: '€', INR: '₹', JPY: '¥'
@@ -56,6 +57,9 @@ export default function ExpenseDetailModal({ expense, activeMembers, currentUser
         activeMembers.forEach(m => { state[m.name] = (expense.splits[m.name] || 0) > 0 || m.name === expense.paidBy; });
         return state;
     });
+    // Tracks which members' exact-split amounts the user has manually edited this
+    // session; untouched members auto-rebalance around whatever's left, Splitwise-style.
+    const [touchedMembers, setTouchedMembers] = useState<Record<string, boolean>>({});
 
     const getEditUnallocatedPoolAmount = (): number => {
         const totalInputBill = parseFloat(editForm.amount) || 0;
@@ -64,14 +68,18 @@ export default function ExpenseDetailModal({ expense, activeMembers, currentUser
     };
 
     const handleEditExactValueChange = (targetMemberName: string, value: string) => {
-        const totalCost = parseFloat(editForm.amount) || 0;
-        const updatedCustomValues = { ...editForm.customValues, [targetMemberName]: value };
-        const configuredSum = Object.entries(updatedCustomValues)
-            .filter(([name]) => name !== editForm.paidBy)
-            .reduce((sum, [_, val]) => sum + (parseFloat(val) || 0), 0);
+        const nextTouched = { ...touchedMembers, [targetMemberName]: true };
+        setTouchedMembers(nextTouched);
+        const total = parseFloat(editForm.amount) || 0;
+        const rebalanced = recomputeExactSplit(total, activeMembers, nextTouched, { ...editForm.customValues, [targetMemberName]: value });
+        setEditForm({ ...editForm, customValues: rebalanced });
+    };
 
-        updatedCustomValues[editForm.paidBy] = Math.max(0, totalCost - configuredSum).toFixed(2);
-        setEditForm({ ...editForm, customValues: updatedCustomValues });
+    const handleResetSplit = () => {
+        setTouchedMembers({});
+        const total = parseFloat(editForm.amount) || 0;
+        const rebalanced = recomputeExactSplit(total, activeMembers, {}, {});
+        setEditForm({ ...editForm, customValues: rebalanced });
     };
 
     const submitEditUpdate = (e: React.FormEvent) => {
@@ -192,18 +200,21 @@ export default function ExpenseDetailModal({ expense, activeMembers, currentUser
 
                         {editForm.splitType === 'EXACT' && (
                             <div className="p-4 bg-stone-50 rounded-2xl space-y-3 border border-stone-100">
-                                <div className="flex justify-between items-center mb-1">
-                                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-wide">Adjust targets (Unassigned rolls to Payer)</p>
-                                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold ${getEditUnallocatedPoolAmount() === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-400'}`}>
-                                        Remaining: {CURRENCY_SYMBOLS[editForm.currency]}{(getEditUnallocatedPoolAmount() || 0).toFixed(2)}
-                                    </span>
+                                <div className="flex justify-between items-center mb-1 gap-2">
+                                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-wide">Adjust anyone's share</p>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button type="button" onClick={handleResetSplit} className="text-[10px] font-bold text-stone-500 underline underline-offset-2">Reset</button>
+                                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold ${getEditUnallocatedPoolAmount() === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-400'}`}>
+                                            Remaining: {CURRENCY_SYMBOLS[editForm.currency]}{(getEditUnallocatedPoolAmount() || 0).toFixed(2)}
+                                        </span>
+                                    </div>
                                 </div>
                                 {activeMembers.map(m => (
                                     <div key={m.clerkId} className="flex items-center justify-between gap-2 text-base">
                                         <span className="font-bold text-stone-700">{m.name}</span>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-xs font-bold">{CURRENCY_SYMBOLS[editForm.currency]}</span>
-                                            <input type="number" step="0.01" placeholder="0.00" disabled={m.name === editForm.paidBy} value={editForm.customValues[m.name] || ''} onChange={(e) => handleEditExactValueChange(m.name, e.target.value)} className={`w-28 border rounded-xl py-2 pl-6 pr-3 text-right font-black text-sm ${m.name === editForm.paidBy ? 'bg-stone-100 text-stone-400' : 'bg-white text-stone-800'}`} required />
+                                            <input type="number" step="0.01" placeholder="0.00" value={editForm.customValues[m.name] || ''} onChange={(e) => handleEditExactValueChange(m.name, e.target.value)} className="w-28 border rounded-xl py-2 pl-6 pr-3 text-right font-black text-sm bg-white text-stone-800" required />
                                         </div>
                                     </div>
                                 ))}

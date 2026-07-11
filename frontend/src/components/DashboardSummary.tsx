@@ -44,7 +44,7 @@ export default function DashboardSummary({
 
       <div>
         <h3 className="text-xs font-black tracking-wider text-stone-400 uppercase mb-3 flex items-center gap-1.5">
-          <Users size={14} /> Net Optimized Clearances
+          <Users size={14} /> Optimized Clearances
         </h3>
         {minimizedDebts.length === 0 ? (
           <div className="p-4 text-center bg-stone-50/50 border border-dashed border-stone-200 rounded-2xl text-sm text-stone-400 font-medium">All balances squared away! 🎉</div>

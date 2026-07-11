@@ -114,3 +114,36 @@ export function getUnallocatedPoolAmount(amount: string, customValues: Record<st
   const allocatedSum = activeMembers.reduce((sum, m) => sum + (parseFloat(customValues[m.name]) || 0), 0);
   return totalInputBill - allocatedSum;
 }
+
+// Splitwise-style exact split: members the user has manually edited ("touched")
+// keep their entered value; the remaining amount is divided evenly across
+// everyone else, recalculated live as values change. Works in integer cents
+// and hands out any leftover penny one-by-one so the shares always sum to
+// exactly the total (no independent-rounding drift like 10.33 x 3 = 30.99).
+export function recomputeExactSplit(
+  totalAmount: number,
+  activeMembers: Roommate[],
+  touched: Record<string, boolean>,
+  currentValues: Record<string, string>
+): Record<string, string> {
+  const touchedMembers = activeMembers.filter(m => touched[m.name]);
+  const untouchedMembers = activeMembers.filter(m => !touched[m.name]);
+  const touchedSum = touchedMembers.reduce((sum, m) => sum + (parseFloat(currentValues[m.name]) || 0), 0);
+  const remainingCents = Math.max(0, Math.round((totalAmount - touchedSum) * 100));
+
+  const result: Record<string, string> = {};
+  touchedMembers.forEach(m => { result[m.name] = currentValues[m.name] || '0.00'; });
+
+  if (untouchedMembers.length > 0) {
+    const baseCents = Math.floor(remainingCents / untouchedMembers.length);
+    let leftoverCents = remainingCents - baseCents * untouchedMembers.length;
+
+    untouchedMembers.forEach(m => {
+      let cents = baseCents;
+      if (leftoverCents > 0) { cents += 1; leftoverCents -= 1; }
+      result[m.name] = (cents / 100).toFixed(2);
+    });
+  }
+
+  return result;
+}
