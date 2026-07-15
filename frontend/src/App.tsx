@@ -336,7 +336,10 @@ export default function App() {
     const settleAmtVal = parseFloat(customSettleAmt);
     if (isNaN(settleAmtVal) || settleAmtVal <= 0 || customSettlePayer === customSettleReceiver) return;
 
-    const computedSplitsGBP: Record<string, number> = { [customSettlePayer]: settleAmtVal, [customSettleReceiver]: 0 };
+    // Settling a debt is the reverse of a normal expense: the payer's own
+    // share is 0 (they're clearing what they owed), and the receiver's
+    // share equals the settled amount, so it cancels out their balance.
+    const computedSplitsGBP: Record<string, number> = { [customSettlePayer]: 0, [customSettleReceiver]: settleAmtVal };
 
     const payload = {
       groupId: activeGroupId,
@@ -431,7 +434,9 @@ export default function App() {
 
   const triggerSettleTransaction = async () => {
     if (!settleTarget || !user) return;
-    const computedSplitsGBP: Record<string, number> = { [settleTarget.from]: settleTarget.amount, [settleTarget.to]: 0 };
+    // Same reversal as manual settlement: payer's share is 0, receiver's
+    // share is the settled amount, so it cancels the existing debt exactly.
+    const computedSplitsGBP: Record<string, number> = { [settleTarget.from]: 0, [settleTarget.to]: settleTarget.amount };
 
     const payload = {
       groupId: activeGroupId,
