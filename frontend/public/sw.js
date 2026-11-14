@@ -16,8 +16,8 @@ self.addEventListener('push', (event) => {
 
     const options = {
         body: payload.body,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
+        icon: '/SS_logo_2_512.png',
+        badge: '/SS_logo_2_512.png',
         tag: payload.tag || 'sharesquare-notice',
         renotify: true,
         requireInteraction: Boolean(payload.isUrgent),
