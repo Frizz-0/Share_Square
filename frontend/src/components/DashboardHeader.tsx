@@ -1,4 +1,4 @@
-import { Sparkles, FolderPlus, Settings, Layers } from 'lucide-react';
+import { FolderPlus, Settings, Layers } from 'lucide-react';
 import { UserButton } from '@clerk/clerk-react';
 import type { Group } from '../types';
 
