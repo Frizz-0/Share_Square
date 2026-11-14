@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Check, Sparkles, Loader2, ShoppingBag, Plus, Camera, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Check, Sparkles, Loader2, ShoppingBag, Plus, Camera, ChevronUp } from 'lucide-react';
 import type { CurrencyCode, ExpenseItem, Roommate, SplitType } from '../../types';
 import { CURRENCY_SYMBOLS, QUICK_ACTIONS_PRESETS } from '../../constants';
 import { getUnallocatedPoolAmount, recomputeExactSplit } from '../../utils/finance';
