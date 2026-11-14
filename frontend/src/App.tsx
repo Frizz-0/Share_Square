@@ -174,7 +174,9 @@ export default function App() {
               attachmentName: item.attachmentName || undefined,
               isSettlement: item.isSettlement || undefined,
               isRecurring: item.isRecurring || undefined,
-              recurringDay: item.recurringDay || undefined
+              recurringDay: item.recurringDay || undefined,
+              note: item.note || undefined,
+              items: Array.isArray(item.items) ? item.items : undefined,
             }));
           setExpenses(sanitized);
         }
@@ -514,7 +516,7 @@ export default function App() {
     if (!user) return;
     try {
       setExpenses(prev => prev.map(e => e.id === updated.id ? updated : e));
-      await putExpense({ ...updated, groupId: activeGroupId, expenseId: updated.id, userId: user.id });
+      await putExpense({ ...updated, groupId: activeGroupId, expenseId: updated.id, userId: user.id, note: updated.note || null, items: updated.items || null });
       pushLog('EXPENSE_MODIFIED', `Updated details for: "${updated.title}"`);
     } catch (err) {
       console.error("Cloud edit failed:", err);

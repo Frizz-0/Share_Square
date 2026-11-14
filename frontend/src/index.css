@@ -215,3 +215,9 @@ body {
     opacity: 0.8;
   }
 }
+
+.fixed .max-w-md {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background-image: none !important;
+}
