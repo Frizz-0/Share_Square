@@ -187,7 +187,23 @@ export default function App() {
 
     hydrate(true);
     const pollId = setInterval(() => hydrate(false), 6000);
-    return () => clearInterval(pollId);
+
+    // Mobile browsers throttle/pause setInterval timers once the tab is
+    // backgrounded or the screen locks, so the 6s poll can silently stall.
+    // Force an immediate refresh whenever the app comes back into view so
+    // other members' changes (like a settled debt) show up right away
+    // instead of waiting for the timer to catch up.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') hydrate(false);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+
+    return () => {
+      clearInterval(pollId);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
   }, [user, activeGroupId]);
 
   const convertToGBP = (amount: number, fromCurrency: CurrencyCode): number => convertToGBPRate(amount, fromCurrency, fxRates);

@@ -1,7 +1,217 @@
 @import "tailwindcss";
 
+/* 🎄 COHESIVE CHRISTMAS THEME — PINE GARLAND, JINGLE BELLS & WINTER BACKDROP */
+
 body {
-  background-color: #FBF9F6;
+  background-color: #E8ECE8 !important;
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+.bg-\[\#FAF9F6\],
+.bg-\[\#FBF9F6\] {
+  background-color: #E8ECE8 !important;
+}
+
+.max-w-md.bg-white,
+.max-w-md {
+  background-color: #F4F7F9 !important;
+  background-image:
+    /* Top: Elegant draped pine branches (Muted Sage) */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='440' height='120' viewBox='0 0 440 120'%3E%3Cpath d='M-20,0 Q100,60 220,20 T460,0 L460,-20 L-20,-20 Z' fill='%232C4C3B' opacity='0.8'/%3E%3Cpath d='M-10,0 Q120,80 240,30 T480,0 L480,-20 L-10,-20 Z' fill='%233A5F4B' opacity='0.6'/%3E%3Ccircle cx='80' cy='35' r='4' fill='%23D4AF37'/%3E%3Ccircle cx='180' cy='25' r='3' fill='%238B3A3A'/%3E%3Ccircle cx='320' cy='45' r='5' fill='%23D4AF37'/%3E%3Ccircle cx='400' cy='20' r='3' fill='%238B3A3A'/%3E%3Cpath d='M80,0 L80,31 M180,0 L180,22 M320,0 L320,40 M400,0 L400,17' stroke='%23D4AF37' stroke-width='1' opacity='0.5'/%3E%3C/svg%3E"),
+    /* Bottom: Soft watercolor snowdrifts and minimalist muted gifts */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='440' height='140' viewBox='0 0 440 140'%3E%3Cpath d='M0,90 Q120,50 240,80 T440,60 L440,140 L0,140 Z' fill='%23E2E8F0' opacity='0.7'/%3E%3Cpath d='M0,110 Q150,70 280,100 T440,80 L440,140 L0,140 Z' fill='%23FFFFFF'/%3E%3Cg transform='translate(40, 85)'%3E%3Crect x='0' y='0' width='30' height='25' fill='%238B3A3A' rx='2'/%3E%3Crect x='12' y='0' width='6' height='25' fill='%23D4AF37'/%3E%3Crect x='0' y='10' width='30' height='5' fill='%23D4AF37'/%3E%3C/g%3E%3Cg transform='translate(360, 75)'%3E%3Crect x='0' y='0' width='35' height='35' fill='%234A5D53' rx='2'/%3E%3Crect x='15' y='0' width='5' height='35' fill='%23E5E7EB'/%3E%3Crect x='0' y='15' width='35' height='5' fill='%23E5E7EB'/%3E%3C/g%3E%3C/svg%3E"),
+    /* Left/Right Edges: Subtle frosted snowflakes framing the sides */
+    radial-gradient(circle at 10px 300px, rgba(212, 175, 55, 0.15) 2px, transparent 3px),
+    radial-gradient(circle at 430px 250px, rgba(139, 58, 58, 0.15) 3px, transparent 4px),
+    radial-gradient(circle at 15px 500px, rgba(44, 76, 59, 0.1) 4px, transparent 5px),
+    radial-gradient(circle at 425px 600px, rgba(212, 175, 55, 0.15) 2px, transparent 3px),
+    /* Base Gradient: Soft Frosted Ice */
+    linear-gradient(180deg, #F8FAFC 0%, #Eef2f6 50%, #E2E8F0 100%) !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat !important;
+  background-position: top center, bottom center, left center, right center, left bottom, right bottom, center !important;
+  background-size: 100% 120px, 100% 140px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, cover !important;
+  border: 1px solid #D4AF37 !important;
+  /* Thin Champagne Gold Rim */
+  box-shadow: 0 25px 50px -12px rgba(44, 76, 59, 0.15) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* ==========================================================================
+   3. UNIVERSAL FROSTED GLASS CARDS (Glassmorphism Across All UI Containers)
+   ========================================================================== */
+.max-w-md .bg-white,
+.max-w-md .bg-stone-50,
+.max-w-md .bg-stone-50\/40,
+.max-w-md .bg-stone-50\/60,
+.max-w-md .bg-stone-100,
+.max-w-md [class*="rounded-2xl"][class*="border"],
+.max-w-md [class*="rounded-3xl"][class*="border"],
+.max-w-md [class*="rounded-\[24px\]"] {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.52) 0%,
+      rgba(248, 250, 252, 0.34) 100%) !important;
+  backdrop-filter: blur(14px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.78) !important;
+  box-shadow:
+    0 8px 24px -4px rgba(44, 76, 59, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease !important;
+}
+
+/* .max-w-md .bg-white:hover, */
+.max-w-md .bg-stone-50:hover,
+.max-w-md [class*="rounded-2xl"][class*="border"]:hover,
+.max-w-md [class*="rounded-3xl"][class*="border"]:hover,
+.max-w-md [class*="rounded-\[24px\]"]:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.68) 0%,
+      rgba(248, 250, 252, 0.48) 100%) !important;
+  border-color: rgba(212, 175, 55, 0.55) !important;
+  box-shadow:
+    0 12px 28px -4px rgba(44, 76, 59, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 1) !important;
+}
+
+/* Keep nested pills/inputs inside frosted cards clean without double-stacking heavy blur */
+/* .max-w-md .bg-white input, */
+/* .max-w-md .bg-white select, */
+/* .max-w-md .bg-white textarea, */
+.max-w-md .bg-stone-50 input {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: none !important;
+  border-color: rgba(212, 175, 55, 0.3) !important;
+}
+
+
+/* 3. Soft Bokeh Snowfall & Crystalline Snowflakes Over the Slate-Blue Sky */
+.bg-\[\#FAF9F6\]::before,
+.bg-\[\#FBF9F6\]::before {
+  content: "";
+  position: fixed;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 28rem;
+  height: 200%;
+  pointer-events: none;
+  z-index: 55;
+  background-image:
+    radial-gradient(6px 6px at 45px 60px, rgba(255, 255, 255, 0.65), transparent 70%),
+    radial-gradient(9px 9px at 140px 150px, rgba(255, 255, 255, 0.45), transparent 70%),
+    radial-gradient(7px 7px at 260px 85px, rgba(255, 255, 255, 0.55), transparent 70%),
+    radial-gradient(10px 10px at 310px 210px, rgba(255, 255, 255, 0.4), transparent 70%),
+    radial-gradient(3px 3px at 80px 110px, #FFFFFF, transparent),
+    radial-gradient(3.5px 3.5px at 195px 40px, #FFFFFF, transparent),
+    radial-gradient(3px 3px at 235px 175px, #FFFFFF, transparent),
+    radial-gradient(3.5px 3.5px at 35px 230px, #FFFFFF, transparent),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='280' viewBox='0 0 320 280'%3E%3Cg stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.85'%3E%3Cpath d='M110,40 L110,56 M102,48 L118,48 M104,42 L116,54 M116,42 L104,54'/%3E%3Cpath d='M275,130 L275,146 M267,138 L283,138 M269,132 L281,144 M281,132 L269,144'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 360px 280px;
+  animation: xmas-bokeh-snow 12s linear infinite;
+}
+
+@keyframes xmas-bokeh-snow {
+  0% {
+    transform: translate(-50%, 0);
+  }
+
+  100% {
+    transform: translate(-50%, 50%);
+  }
+}
+
+/* 4. Festive Add Bill Button */
+.holiday-add-bill,
+.bg-emerald-950 {
+  background-color: #991B1B !important;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='95' height='95' viewBox='0 0 95 95'%3E%3Cpolygon points='65,10 43,50 56,50 38,86 92,86 74,50 87,50' fill='%2314532D' opacity='0.75'/%3E%3Ccircle cx='65' cy='10' r='3.5' fill='%23FBBF24'/%3E%3Ccircle cx='57' cy='42' r='2.5' fill='%23FBBF24'/%3E%3Ccircle cx='71' cy='66' r='3' fill='%23FCA5A5'/%3E%3C/svg%3E"),
+    linear-gradient(135deg, #7F1D1D 0%, #B91C1C 52%, #14532D 100%) !important;
+  background-repeat: no-repeat, no-repeat !important;
+  background-position: right 4px bottom -4px, center !important;
+  background-size: 44px 44px, cover !important;
+  border: 2px solid #FBBF24 !important;
+  box-shadow: 0 12px 26px -6px rgba(153, 27, 27, 0.45) !important;
+  color: #FFFFFF !important;
+}
+
+/* 5. Inner Cards — Frosted Translucent Glass so the Winter Forest & Snow Shine Through */
+.max-w-md .bg-white {
+  background-color: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(6px);
+}
+
+.bg-stone-50 {
+  background-color: rgba(254, 249, 238, 0.85) !important;
+}
+
+.border-stone-100,
+.border-stone-200,
+.border-stone-200\/60,
+.border-stone-200\/80 {
+  border-color: #E2D1B3 !important;
+}
+
+/* 6. Interactive Micro-Animations on Expense Cards, Clearances & Navigation Tiles */
+/* .max-w-md .bg-white {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(6px);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
+}
+
+.max-w-md .bg-white:hover {
+  transform: translateY(-2px);
+  border-color: #D4AF37 !important;
+  box-shadow: 0 8px 20px -4px rgba(15, 66, 38, 0.12) !important;
+} */
+
+.bg-stone-50 {
+  background-color: rgba(254, 249, 238, 0.88) !important;
+}
+
+.border-stone-100,
+.border-stone-200,
+.border-stone-200\/60,
+.border-stone-200\/80 {
+  border-color: #E5D4B7 !important;
+}
+
+/* 7. Festive Badges & Sparkle Pulse */
+.bg-emerald-50 {
+  background-color: #FEE2E2 !important;
+  border-color: #FCA5A5 !important;
+}
+
+.text-emerald-600,
+.text-emerald-700,
+.text-emerald-800,
+.text-emerald-950 {
+  color: #991B1B !important;
+}
+
+.fill-emerald-600 {
+  fill: #D97706 !important;
+  color: #D97706 !important;
+  animation: xmas-sparkle-twinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes xmas-sparkle-twinkle {
+
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.22) rotate(12deg);
+    opacity: 0.8;
+  }
 }

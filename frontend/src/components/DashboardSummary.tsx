@@ -27,10 +27,10 @@ export default function DashboardSummary({
           {currentYourNetGBP >= 0 ? `+£${currentYourNetGBP.toFixed(2)}` : `-£${Math.abs(currentYourNetGBP).toFixed(2)}`}
         </h2>
         <div className="mt-5 grid grid-cols-2 gap-2.5">
-          <button onClick={onAddBill} className="bg-white text-emerald-950 font-black py-4 rounded-2xl text-sm flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-[0.96]">
+          <button onClick={onAddBill} className="holiday-add-bill font-black py-4 rounded-2xl text-sm flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-[0.96]">
             <Plus size={15} strokeWidth={3} /> Add Bill
           </button>
-          <button onClick={onPaidBack} className="bg-emerald-900 text-white font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-1 transition-all active:scale-[0.96] border border-emerald-700/30 shadow-md">
+          <button onClick={onPaidBack} className="bg-[#f6f9fa] text-white-800 font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-1 transition-all active:scale-[0.96] border border-green-200 shadow-sm">
             <CreditCard size={14} /> Paid Back
           </button>
         </div>
