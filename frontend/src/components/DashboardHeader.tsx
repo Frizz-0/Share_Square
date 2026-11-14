@@ -21,8 +21,17 @@ export default function DashboardHeader({
   return (
     <>
       <header className="p-6 pb-4 flex justify-between items-center bg-white border-b border-stone-50">
-        <h1 className="text-2xl font-black tracking-tight text-stone-900 flex items-center gap-1.5">
+        {/* <h1 className="text-2xl font-black tracking-tight text-stone-900 flex items-center gap-1.5">
           ShareSquare <Sparkles size={20} className="text-emerald-600 fill-emerald-600" />
+        </h1> */}
+        <h1 className="text-2xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+          ShareSquare
+          <img
+            src="SS_logo_2.png"
+            // alt="ShareSquare Logo"
+            className="w-8 h-8 object-contain"
+          />
+          {/* <Sparkles size={20} className="text-emerald-600 fill-emerald-600" /> */}
         </h1>
         <div className="flex gap-2 items-center">
           <button onClick={onOpenGroupModal} className="p-3.5 bg-stone-50 text-stone-700 rounded-2xl border border-stone-100 shadow-sm flex items-center justify-center"><FolderPlus size={18} /></button>

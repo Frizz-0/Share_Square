@@ -1,8 +1,9 @@
 self.addEventListener('push', (event) => {
     let payload = {
-        title: 'ShareSquare House Alert',
-        body: 'New update in your household hub.',
-        url: '/'
+        title: 'ShareSquare',
+        body: 'New update in your House Hub.',
+        url: '/',
+        isUrgent: false
     };
 
     try {
@@ -13,15 +14,22 @@ self.addEventListener('push', (event) => {
         if (event.data) payload.body = event.data.text();
     }
 
+    const options = {
+        body: payload.body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: payload.tag || 'sharesquare-notice',
+        renotify: true,
+        requireInteraction: Boolean(payload.isUrgent),
+        vibrate: payload.isUrgent ? [250, 100, 250, 100, 400] : [120, 60, 120],
+        data: { url: payload.url || '/' },
+        actions: [
+            { action: 'open', title: 'Open House Hub' }
+        ]
+    };
+
     event.waitUntil(
-        self.registration.showNotification(payload.title, {
-            body: payload.body,
-            icon: '/vite.svg',
-            badge: '/vite.svg',
-            tag: payload.tag || 'sharesquare-notice',
-            renotify: true,
-            data: { url: payload.url || '/' }
-        })
+        self.registration.showNotification(payload.title, options)
     );
 });
 
