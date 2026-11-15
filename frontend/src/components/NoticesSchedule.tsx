@@ -25,7 +25,7 @@ import {
 } from '../api/notices';
 import { fetchSchedules, createSchedule, deleteSchedule, type Schedule } from '../api/schedules';
 import { formatEventCountdown } from '../utils/countdown';
-import { subscribeDeviceToHousePush, sendTestPush } from '../utils/pushNotifications';
+import { subscribeDeviceToHousePush } from '../utils/pushNotifications';
 import ConfirmDialog from './ConfirmDialog';
 
 interface Props {
@@ -92,7 +92,6 @@ export default function NoticesSchedule({
     return Notification.permission;
   });
   const [pushStatus, setPushStatus] = useState<string | null>(null);
-  const [isTestingPush, setIsTestingPush] = useState(false);
 
   const handleEnableNotifications = async () => {
     setPushStatus('Registering device for house alerts...');
@@ -101,22 +100,6 @@ export default function NoticesSchedule({
       setNotifPermission(Notification.permission);
     }
     setPushStatus(result.reason);
-  };
-
-  const handleTestPush = async () => {
-    setIsTestingPush(true);
-    setPushStatus('Sending test push to all registered devices...');
-    try {
-      const report = await sendTestPush(groupId, userId);
-      setPushStatus(
-        `Targets: ${report.totalTargets ?? 0} | Delivered: ${report.sent ?? 0}` +
-        (report.errors?.length ? ` | Error: ${report.errors.join('; ')}` : '')
-      );
-    } catch (err: any) {
-      setPushStatus(`Test push request failed: ${err?.message || 'Network error'}`);
-    } finally {
-      setIsTestingPush(false);
-    }
   };
 
   // Mark notices as read whenever this tab is opened or updated
@@ -279,8 +262,8 @@ export default function NoticesSchedule({
             onClick={handleEnableNotifications}
             title={notifPermission === 'granted' ? 'Alerts active — tap to sync device' : 'Enable house alerts'}
             className={`p-3 rounded-2xl border shadow-sm flex items-center justify-center transition-colors ${notifPermission === 'granted'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
               }`}
           >
             {notifPermission === 'granted' ? <BellRing size={17} /> : <Bell size={17} />}
@@ -291,22 +274,9 @@ export default function NoticesSchedule({
       </header>
 
       <main className="p-6 space-y-6 overflow-y-auto flex-1">
-        {/* Push Subscription Status & Diagnostic Test Banner */}
-        {(pushStatus || notifPermission === 'granted') && (
-          <div className="p-3 rounded-2xl bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-700 flex items-center justify-between gap-2">
-            <span className="leading-snug">
-              {pushStatus || 'House push alerts active on this device.'}
-            </span>
-            {notifPermission === 'granted' && (
-              <button
-                type="button"
-                onClick={handleTestPush}
-                disabled={isTestingPush}
-                className="px-3 py-1.5 rounded-xl bg-emerald-950 text-white text-[10px] font-black shrink-0 disabled:opacity-50"
-              >
-                {isTestingPush ? 'Sending...' : 'Test Push'}
-              </button>
-            )}
+        {pushStatus && (
+          <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900">
+            {pushStatus}
           </div>
         )}
 
@@ -328,8 +298,8 @@ export default function NoticesSchedule({
                     type="button"
                     onClick={() => setCategory(cat)}
                     className={`px-3 py-1.5 rounded-xl text-[11px] font-black border transition-all whitespace-nowrap flex items-center gap-1 ${active
-                        ? 'bg-emerald-950 text-white border-emerald-950 shadow-sm'
-                        : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-100'
+                      ? 'bg-emerald-950 text-white border-emerald-950 shadow-sm'
+                      : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-100'
                       }`}
                   >
                     <span>{meta.emoji}</span>
@@ -420,8 +390,8 @@ export default function NoticesSchedule({
                         type="button"
                         onClick={() => handleToggleAck(notice)}
                         className={`px-2.5 py-1 rounded-xl text-[11px] font-black border flex items-center gap-1.5 transition-all active:scale-95 ${hasAcked
-                            ? 'bg-emerald-950 text-white border-emerald-950'
-                            : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
+                          ? 'bg-emerald-950 text-white border-emerald-950'
+                          : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
                           }`}
                       >
                         {cat === 'TASK' ? <Hand size={11} /> : <ThumbsUp size={11} />}

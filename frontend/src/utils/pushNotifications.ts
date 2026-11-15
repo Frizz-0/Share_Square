@@ -63,13 +63,3 @@ export async function subscribeDeviceToHousePush(
         return { ok: false, reason: err?.message || 'Push subscription failed' };
     }
 }
-
-export async function sendTestPush(groupId: string, userId: string): Promise<any> {
-    const base = AWS_API_GATEWAY_URL.replace(/\/+$/, '');
-    const res = await fetch(`${base}/push/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, userId })
-    });
-    return res.json();
-}
