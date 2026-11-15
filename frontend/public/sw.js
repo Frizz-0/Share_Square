@@ -1,3 +1,11 @@
+self.addEventListener('install', () => {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('push', (event) => {
     let payload = {
         title: 'ShareSquare',
@@ -14,10 +22,13 @@ self.addEventListener('push', (event) => {
         if (event.data) payload.body = event.data.text();
     }
 
+    const origin = self.location.origin;
+    const iconUrl = `${origin}/SS_logo_2_512.png`;
+
     const options = {
         body: payload.body,
-        icon: '/SS_logo_2_512.png',
-        badge: '/SS_logo_2_512.png',
+        icon: iconUrl,
+        badge: iconUrl,
         tag: payload.tag || 'sharesquare-notice',
         renotify: true,
         requireInteraction: Boolean(payload.isUrgent),

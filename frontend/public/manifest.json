@@ -1,7 +1,9 @@
 {
+    "id": "/",
     "name": "ShareSquare",
     "short_name": "ShareSquare",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#063128",
     "theme_color": "#063128",
@@ -10,13 +12,25 @@
             "src": "/SS_logo_2_192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/SS_logo_2_192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
         },
         {
             "src": "/SS_logo_2_512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/SS_logo_2_512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ]
 }
