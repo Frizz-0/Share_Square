@@ -22,7 +22,7 @@ export default function DashboardSummary({
   return (
     <>
       <div className="bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 text-white rounded-[36px] p-6 shadow-xl relative">
-        <p className="text-xs font-bold text-emerald-200/80 uppercase tracking-widest">{groupName} Master Net</p>
+        <p className="text-xs font-bold text-emerald-200/80 uppercase tracking-widest">{groupName}</p>
         <h2 className="text-5xl font-black mt-1 tracking-tight">
           {currentYourNetGBP >= 0 ? `+£${currentYourNetGBP.toFixed(2)}` : `-£${Math.abs(currentYourNetGBP).toFixed(2)}`}
         </h2>

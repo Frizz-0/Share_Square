@@ -283,7 +283,7 @@ export default function NoticesSchedule({
         {/* 1. Group Communication & Quick Tasks */}
         <div>
           <h3 className="text-xs font-black tracking-wider text-stone-400 uppercase mb-3 flex items-center gap-1.5">
-            <Megaphone size={14} /> House Feed & Pings
+            <Megaphone size={14} /> Feeds & Pings
           </h3>
 
           <form onSubmit={handlePost} className="p-3.5 bg-stone-50 border border-stone-200/70 rounded-2xl space-y-2.5 mb-3">
@@ -327,7 +327,9 @@ export default function NoticesSchedule({
               disabled={isPosting || !draft.trim()}
               className="w-full bg-emerald-950 text-white font-black py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
-              <Send size={13} /> {isPosting ? 'Sending...' : `Send ${CATEGORY_META[category].label}`}
+              {/* <Send size={13} /> {isPosting ? 'Sending...' : `Post ${CATEGORY_META[category].label}`} */}
+              <Send size={13} /> {isPosting ? 'Sending...' : `Post Notice`}
+
             </button>
           </form>
 

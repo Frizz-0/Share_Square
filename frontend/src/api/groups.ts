@@ -30,6 +30,19 @@ export async function joinGroupByCode(inviteCode: string, userId: string) {
   return response.json();
 }
 
+export async function updateGroup(groupId: string, userId: string, name: string, icon?: string) {
+  const res = await fetch(`${AWS_API_GATEWAY_URL}/groups`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ groupId, userId, name, icon }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update group');
+  }
+  return res.json();
+}
+
 export async function leaveGroup(groupId: string, userId: string, requesterId: string) {
   const response = await fetch(`${AWS_API_GATEWAY_URL}/groups/leave`, {
     method: "POST",

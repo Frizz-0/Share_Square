@@ -13,7 +13,7 @@ import { SettleModal, CustomSettleModal } from './components/modals/SettleModals
 import AddExpenseModal, { type NewExpenseForm } from './components/modals/AddExpenseModal';
 import { useUser } from '@clerk/clerk-react';
 import { fetchGroupData, postExpense, putExpense, deleteExpense as deleteExpenseApi } from './api/expenses';
-import { fetchUserGroups, createGroup as createGroupApi, joinGroupByCode, leaveGroup } from './api/groups';
+import { fetchUserGroups, createGroup as createGroupApi, joinGroupByCode, updateGroup, leaveGroup } from './api/groups';
 import { postAuditLog } from './api/audit';
 import { convertToGBP as convertToGBPRate, computeSplits, getMinimizedDebts, computeUserNetGBP } from './utils/finance';
 
@@ -58,6 +58,7 @@ export default function App() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newInstanceName, setNewInstanceName] = useState('');
   const [editGroupName, setEditGroupName] = useState('');
+  const [editGroupIcon, setEditGroupIcon] = useState('');
 
   const [customSettlePayer, setCustomSettlePayer] = useState('You');
   const [customSettleReceiver, setCustomSettleReceiver] = useState('Alex');
@@ -290,12 +291,21 @@ export default function App() {
     setNewInstanceName('');
   };
 
-  const handleUpdateGroupName = (e: React.FormEvent) => {
+  const handleUpdateGroupName = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editGroupName.trim()) return;
-    setGroups(groups.map(g => g.id === activeGroupId ? { ...g, name: editGroupName.trim() } : g));
-    pushLog('GROUP_MODIFIED', `Renamed group workspace profile to: "${editGroupName.trim()}"`);
-    setEditGroupName('');
+    if (!user || !activeGroup) return;
+    const name = editGroupName.trim() || activeGroup.name;
+    const icon = editGroupIcon.trim() || activeGroup.icon;
+
+    try {
+      await updateGroup(activeGroup.id, user.id, name, icon);
+      setGroups(prev => prev.map(group => group.id === activeGroup.id ? { ...group, name, icon } : group));
+      pushLog('GROUP_MODIFIED', `Updated group workspace profile to: "${name}"`);
+      setEditGroupName(name);
+      setEditGroupIcon(icon);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update group.');
+    }
   };
 
   const confirmDeleteActiveGroup = async () => {
@@ -552,7 +562,11 @@ export default function App() {
               onSelectGroup={(groupId, firstInstanceId) => { setActiveGroupId(groupId); setActiveInstanceId(firstInstanceId); }}
               onSelectInstance={setActiveInstanceId}
               onOpenGroupModal={() => setIsGroupModalOpen(true)}
-              onOpenGroupSettings={() => setIsGroupSettingsOpen(true)}
+              onOpenGroupSettings={() => {
+                setEditGroupName(activeGroup.name);
+                setEditGroupIcon(activeGroup.icon);
+                setIsGroupSettingsOpen(true);
+              }}
               onOpenInstanceModal={() => setIsInstanceModalOpen(true)}
             />
 
@@ -622,6 +636,8 @@ export default function App() {
             roommates={roommates}
             editGroupName={editGroupName}
             setEditGroupName={setEditGroupName}
+            editGroupIcon={editGroupIcon}
+            setEditGroupIcon={setEditGroupIcon}
             onUpdateGroupName={handleUpdateGroupName}
             onEvictMember={handleEvictMember}
             isAdmin={isAdmin}

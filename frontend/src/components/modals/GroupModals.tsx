@@ -92,6 +92,8 @@ interface GroupSettingsModalProps {
   roommates: Roommate[];
   editGroupName: string;
   setEditGroupName: (v: string) => void;
+  editGroupIcon: string;
+  setEditGroupIcon: (v: string) => void;
   onUpdateGroupName: (e: React.FormEvent) => void;
   onEvictMember: (clerkId: string, name: string) => void;
   isAdmin: boolean;
@@ -101,7 +103,7 @@ interface GroupSettingsModalProps {
 }
 
 export function GroupSettingsModal({
-  activeGroup, roommates, editGroupName, setEditGroupName, onUpdateGroupName,
+  activeGroup, roommates, editGroupName, setEditGroupName, editGroupIcon, setEditGroupIcon, onUpdateGroupName,
   onEvictMember, isAdmin, currentUserId, onDeleteGroup, onClose
 }: GroupSettingsModalProps) {
   const [copied, setCopied] = useState(false);
@@ -120,12 +122,16 @@ export function GroupSettingsModal({
         <button type="button" onClick={onClose} className="absolute right-5 top-5 p-2 bg-stone-50 rounded-full text-stone-400"><X size={16} /></button>
         <div><h3 className="text-xl font-black text-stone-800">Group Control Center</h3><p className="text-xs text-stone-400 mt-0.5">Configure space parameters</p></div>
 
-        <form onSubmit={onUpdateGroupName} className="space-y-2 pt-1">
-          <label className="block text-[11px] font-black text-stone-400 uppercase">Change Space Name</label>
-          <div className="flex gap-2">
-            <input type="text" placeholder={activeGroup.name} value={editGroupName} onChange={(e) => setEditGroupName(e.target.value)} className="flex-1 bg-stone-50 border rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none" />
-            <button type="submit" className="bg-stone-900 text-white font-bold px-4 rounded-xl text-xs">Update</button>
+        <form onSubmit={onUpdateGroupName} className="space-y-3 pt-1">
+          <div className="space-y-2">
+            <label htmlFor="group-name" className="block text-[11px] font-black text-stone-400 uppercase">Change Space Name</label>
+            <input id="group-name" type="text" value={editGroupName} onChange={(e) => setEditGroupName(e.target.value)} className="w-full bg-stone-50 border rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none" required />
           </div>
+          <div className="space-y-2">
+            <label htmlFor="group-icon" className="block text-[11px] font-black text-stone-400 uppercase">Change Space Icon</label>
+            <input id="group-icon" type="text" value={editGroupIcon} onChange={(e) => setEditGroupIcon(e.target.value)} className="w-full bg-stone-50 border rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none" required />
+          </div>
+          <button type="submit" className="w-full bg-stone-900 text-white font-bold py-3 rounded-xl text-xs">Update Space</button>
         </form>
 
         <div className="space-y-2 border-t border-stone-100 pt-3">
