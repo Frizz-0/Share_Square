@@ -23,7 +23,7 @@ self.addEventListener('push', (event) => {
     }
 
     const origin = self.location.origin;
-    const iconUrl = `${origin}/SS_logo_2_512.png`;
+    const iconUrl = `${origin}/SS_logo_1.png`;
 
     const options = {
         body: payload.body,
